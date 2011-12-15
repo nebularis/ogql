@@ -1,7 +1,25 @@
-query  <- head:step tail:(sep step)* ;
-step  <- name_predicate ;
-name_predicate <- (!space word)* ;
-word  <- [\\w\\-_]+ ~;
-space <- [ \t\n\s\r] / crlf ~;
-crlf <- [\r]? [\n] ~;
-sep <- ',' ~;
+query                   <- head:step tail:(sep step)* ;
+step                    <- name_predicate / type_predicate / filter_predicate;
+name_predicate          <- (![A-Z] word)+ bracketed_expression? ;
+type_predicate          <- ('*' / (![a-z] word)+)+ bracketed_expression? ;
+axis_predicate          <- (&'^' (![A-Z] word))+ ;
+filter_predicate        <- (&name_predicate bracketed_expression) /
+                           (&type_predicate bracketed_expression) ;
+bracketed_expression    <- ('[' (!']' expression)* ']')+ ;
+expression              <- data_point operator data_point_or_literal ;
+data_point_or_literal   <- data_point / literal ;
+data_point              <- axis '::' member_name ;
+axis                    <- normative_axis / backreference '.' normative_axis ;
+normative_axis          <- 'provider' / 'consumer' ;
+backreference           <- (&'@' index)+ ;
+member_name             <- (![A-Z] word)+ / axis_predicate ;
+operator                <- '=' / '>' / '<' / '!=' / '<=' / '>=' / '~' / '~=' / '@'
+                           'eq' / 'gt' / 'lt' / 'neq' / 'lteq' / 'gteq' /
+                           'like' / 'matches' / 'contains' / 'in' / 
+                           'starts with' / 'ends with' / 'path exists' ;
+literal                 <- "'" (!"'" .)* "'" ;
+index                   <- [0-9]+ ;
+word                    <- [\\w\\-_]+ ;
+space                   <- [ \t\n\s\r] / crlf ;
+crlf                    <- [\r]? [\n] ;
+sep                     <- ',' ;

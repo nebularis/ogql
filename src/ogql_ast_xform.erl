@@ -29,17 +29,65 @@ transform('query', Node, _) ->
       _ -> drop_sep(Node)
     end;
 transform(name_predicate, Node, _) ->
-    case Node of
-        [[_, Word]] ->
-            {implicit_name_predicate, bin_parts_to_string(Word)};
-        _ ->
-            Node
-    end;
-transform(_, Node, _) ->
-    Node.
+    predicate(implicit_name_predicate, Node);
+transform(type_predicate, Node, _) ->
+    predicate(type_name_predicate, Node);
+transform(axis_predicate, Node, _) ->
+    predicate(axis_predicate, Node);
+transform(anything_predicate, Node, _) ->
+    predicate(any_type_predicate, Node);
+transform(filter_predicate, Node, _) ->
+    predicate(filter_predicate, Node);
+transform(data_point, Node, _) ->
+    [Axis, _, Member] = Node,
+    {Axis, Member};
+transform(literal, Node, _) ->
+    [_, Data, _] = Node,
+    {literal, bin_parts_to_string(Data)};
+transform(NonTerminal, Node, _) ->
+    case is_identifier(NonTerminal) of
+        true ->
+            Node;
+        false ->
+            Node2 = case Node of
+                [[_,[H|_]=Word]] when is_list(Word) andalso is_binary(H) -> 
+                    bin_parts_to_string(Word);
+                Bin when is_binary(Bin) ->
+                    erlang:binary_to_list(Bin);
+                _ ->
+                    Node
+            end,
+            {NonTerminal, Node2}
+    end.
 
-bin_parts_to_string(Parts) -> 
-    lists:concat([ erlang:binary_to_list(B) || B <- Parts ]).
+is_identifier(NonTerminal) ->
+    lists:member(NonTerminal, 
+        [word, space, crlf, sep, normative_axis, data_point_or_literal]).
+
+predicate(Type, Node) ->
+    case Node of
+        [[[[_, Word]]],[]] ->
+            {Type, bin_parts_to_string(Word)};
+        [[_, Word|_]|_] ->
+            {Type, bin_parts_to_string(Word)};
+        [[[_, Word]],[]] ->
+            {Type, bin_parts_to_string(Word)};
+        [[[_, Word]],
+            {bracketed_expression, [[_,
+                [[_, {expression, Expr}]], _]]}] ->
+            {{Type, bin_parts_to_string(Word)}, {filter_expression, Expr}};
+        [[Word],
+            {bracketed_expression, [[_,
+                [[_, {expression, Expr}]], _]]}] ->
+            {{Type, bin_parts_to_string(Word)}, {filter_expression, Expr}};
+        _ ->
+            {Type, Node}
+    end.
+
+bin_parts_to_string(Parts) when is_binary(Parts) ->
+    erlang:binary_to_list(Parts);
+bin_parts_to_string(Parts) ->
+    lists:concat([ erlang:binary_to_list(B) || B <- lists:flatten(Parts) ]).
 
 drop_sep(Node) ->
     H = proplists:get_value(head, Node),
