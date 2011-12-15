@@ -1,0 +1,7 @@
+{application, ogql,
+ [
+  {description, "Object Graph Qualification Language"},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {applications, [kernel, stdlib]}
+ ]}.

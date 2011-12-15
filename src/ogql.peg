@@ -1,0 +1,7 @@
+query  <- head:step tail:(sep step)* ;
+step  <- name_predicate ;
+name_predicate <- (!space word)* ;
+word  <- [\\w\\-_]+ ~;
+space <- [ \t\n\s\r] / crlf ~;
+crlf <- [\r]? [\n] ~;
+sep <- ',' ~;
