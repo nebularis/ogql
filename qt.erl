@@ -8,6 +8,7 @@ main(_) ->
     run_query("platformSystem,systemConsumingPlatform"),
     run_query("service-interface"),
     run_query("service-interface[provider::name='BPP']"),
+    run_query("service-interface[consumer::processId starts_with '1349']"),
     run_query("Person,*[provider::name='Joe']"),
     run_query("consumer-products,Offer").
 

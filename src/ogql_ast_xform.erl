@@ -62,7 +62,7 @@ transform(NonTerminal, Node, _) ->
 
 is_identifier(NonTerminal) ->
     lists:member(NonTerminal, 
-        [word, space, crlf, sep, normative_axis, data_point_or_literal]).
+        [word, space, crlf, sep, normative_axis, data_point_or_literal, step]).
 
 predicate(Type, Node) ->
     case Node of
@@ -75,14 +75,17 @@ predicate(Type, Node) ->
         [[[_, Word]],
             {bracketed_expression, [[_,
                 [[_, {expression, Expr}]], _]]}] ->
-            {{Type, bin_parts_to_string(Word)}, {filter_expression, Expr}};
+            {{Type, bin_parts_to_string(Word)}, {filter_expression, strip(Expr)}};
         [[Word],
             {bracketed_expression, [[_,
                 [[_, {expression, Expr}]], _]]}] ->
-            {{Type, bin_parts_to_string(Word)}, {filter_expression, Expr}};
+            {{Type, bin_parts_to_string(Word)}, {filter_expression, strip(Expr)}};
         _ ->
             {Type, Node}
     end.
+
+strip(Expr) ->
+    [ X || X <- Expr, X /= <<" ">> andalso X /= [] ].
 
 bin_parts_to_string(Parts) when is_binary(Parts) ->
     erlang:binary_to_list(Parts);

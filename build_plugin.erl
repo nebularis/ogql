@@ -20,7 +20,7 @@
 %% THE SOFTWARE.
 %% -----------------------------------------------------------------------------
 -module(build_plugin).
--export([pre_compile/2]).
+-export([pre_compile/2, clean/2, pre_eunit/2]).
 
 pre_compile(_, _) ->
     case rebar_plugin_manager:is_base_dir() of
@@ -35,5 +35,16 @@ clean(_, _) ->
         true ->
             rebar_file_utils:rm_rf("generated");
         false ->
+            ok
+    end.
+
+pre_eunit(_, _) ->
+    case rebar_plugin_manager:is_base_dir() of
+        true ->
+            rebar_log:log(debug, "~p~n", 
+                          [file:copy("generated/ogql_grammar.erl", 
+                                     ".test/ogql_grammar.erl")]);
+        false ->
+            rebar_log:log(debug, "Not base_dir~n", []),
             ok
     end.
