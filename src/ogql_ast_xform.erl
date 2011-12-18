@@ -38,9 +38,15 @@ transform(anything_predicate, Node, _) ->
     predicate(any_type_predicate, Node);
 transform(filter_predicate, Node, _) ->
     predicate(filter_predicate, Node);
-transform(data_point, Node, _) ->
-    [Axis, _, Member] = Node,
-    {Axis, Member};
+transform(data_point, [[], Member], _) ->
+    Member;
+transform(data_point, [Axis, _, Member], _) ->
+    case Axis of
+        [] ->
+            {default_axis, Member};
+        _ ->
+            {Axis, Member}
+    end;
 transform(literal, Node, _) ->
     [_, Data, _] = Node,
     {literal, bin_parts_to_string(Data)};

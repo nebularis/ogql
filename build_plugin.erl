@@ -25,10 +25,11 @@
 pre_compile(_, _) ->
     case rebar_plugin_manager:is_base_dir() of
         true ->
-            rebar_utils:ensure_dir("generated");
+            file:make_dir("generated");
         false ->
             ok
-    end.
+    end,
+    ok.
 
 clean(_, _) ->
     case rebar_plugin_manager:is_base_dir() of
@@ -41,10 +42,13 @@ clean(_, _) ->
 pre_eunit(_, _) ->
     case rebar_plugin_manager:is_base_dir() of
         true ->
-            rebar_log:log(debug, "~p~n", 
-                          [file:copy("generated/ogql_grammar.erl", 
-                                     ".test/ogql_grammar.erl")]);
+            Grammar = "ogql_grammar.erl",
+            Source = filename:join("generated", Grammar),
+            Target = filename:join(".test", Grammar),
+            rebar_utils:ensure_dir(Target),
+            file:copy(Source, Target),
+            true = filelib:is_regular(Target),
+            ok;
         false ->
-            rebar_log:log(debug, "Not base_dir~n", []),
-            ok
+            rebar_log:log(debug, "Not base_dir~n", [])
     end.
