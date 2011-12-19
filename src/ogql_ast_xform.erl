@@ -58,6 +58,8 @@ transform(data_point, [Axis, _, Member], _) ->
     end;
 transform(literal, {literal_int, Data}, _) ->
     {literal, {integer, list_to_integer(bin_parts_to_string(Data))}};
+transform(literal, {literal_float, Data}, _) ->
+    {literal, {float, list_to_float(bin_parts_to_string(Data))}};
 transform(literal, {literal_string, Node}, _) ->
     [_, Data, _] = Node,
     {literal, bin_parts_to_string(Data)};

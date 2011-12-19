@@ -91,20 +91,28 @@ filter_test_() ->
                                   {literal, "John%"}]}}])))}].
 
 literal_handling_test_() ->
-    [{"single logical conjunction",
+    [{"separate handling of strings and integers",
      ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 18]"),
                   is(equal_to([{{type_name_predicate,"Person"},
                                 {filter_expression,
                                  [{conjunction,
-                                   [[{default_axis,
-                                      {member_name,"name"}},
+                                   [[{default_axis, {member_name,"name"}},
                                      {operator,"like"},
                                      {literal,"Joe"}],
-                                    [{default_axis,
-                                      {member_name,"age"}},
+                                    [{default_axis, {member_name,"age"}},
                                      {operator,">"},
-                                     {literal,
-                                      {integer,18}}]]}]}}])))}].
+                                     {literal, {integer, 18}}]]}]}}])))},
+     {"separate handling of strings and floats",
+      ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 21.65]"),
+                   is(equal_to([{{type_name_predicate,"Person"},
+                                 {filter_expression,
+                                  [{conjunction,
+                                    [[{default_axis, {member_name,"name"}},
+                                      {operator,"like"},
+                                      {literal,"Joe"}],
+                                     [{default_axis, {member_name,"age"}},
+                                      {operator,">"},
+                                      {literal, {float, 21.65}}]]}]}}])))}].
 
 logical_operator_test_() ->
     [{"single logical conjunction",
