@@ -16,7 +16,7 @@ main(_) ->
                 Employee[::firstName like 'John%']"),
     run_query("Person[::post-code starts_with 'SE9' AND ::name like 'Joe']"),
     run_query("Person[::post-code starts_with 'SE9' AND "
-                                "::name like 'Joe' AND "
+                                "::name like 'Joe' OR "
                                 "::contact_details contains 'Besborough']").
 
 run_query(Query) ->

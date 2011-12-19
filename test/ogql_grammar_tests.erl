@@ -114,7 +114,24 @@ logical_operator_test_() ->
                                             {literal, "Joe"}]]}],
                                      [{default_axis, {member_name, "contact_details"}},
                                       {operator, "contains"},
-                                      {literal, "Besborough"}]]}]}}])))}].
+                                      {literal, "Besborough"}]]}]}}])))},
+      {"mixed disjunctions and conjunctions",
+      ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND "
+                                 "::name like 'Joe' OR "
+                                 "::contact_details contains 'Besborough']"),
+                   is(equal_to([{{type_name_predicate, "Person"},
+                             {filter_expression,    
+                                [{disjunction,
+                                    [[{conjunction,
+                                      [[{default_axis, {member_name, "post-code"}},
+                                     {operator, "starts_with"},
+                                     {literal, "SE9"}],
+                                     [{default_axis, {member_name, "name"}},
+                                     {operator, "like"},
+                                     {literal, "Joe"}]]}],
+                                    [{default_axis, {member_name, "contact_details"}},
+                                  {operator, "contains"},
+                                  {literal, "Besborough"}]]}]}}])))}].
 
 parsed(Q) ->
     ogql_grammar:parse(Q).
