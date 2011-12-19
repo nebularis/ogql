@@ -56,7 +56,9 @@ transform(data_point, [Axis, _, Member], _) ->
         _ ->
             {Axis, Member}
     end;
-transform(literal, Node, _) ->
+transform(literal, {literal_int, Data}, _) ->
+    {literal, {integer, list_to_integer(bin_parts_to_string(Data))}};
+transform(literal, {literal_string, Node}, _) ->
     [_, Data, _] = Node,
     {literal, bin_parts_to_string(Data)};
 transform(NonTerminal, Node, _) ->
@@ -77,7 +79,8 @@ transform(NonTerminal, Node, _) ->
 
 is_identifier(NonTerminal) ->
     lists:member(NonTerminal, 
-        [word, space, crlf, sep, normative_axis, data_point_or_literal, step]).
+        [word, space, crlf, sep, normative_axis, literal_number, 
+            data_point_or_literal, step]).
 
 predicate(Type, Node) ->
     case Node of

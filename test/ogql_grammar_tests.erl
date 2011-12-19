@@ -33,6 +33,10 @@ multiple_path_steps_test() ->
                     [{implicit_name_predicate, "platformSystem"},
                      {implicit_name_predicate, "systemConsumingPlatform"}]))).
 
+%implicit_name_and_type_filter_equivalence_test() ->
+%    ?assertThat(parsed("Person"),
+%                is(equal_to(parsed("?[provider::$type = 'Person']"))).
+
 filter_test_() ->
     [{"filtering an implicit name predicate",
       ?_assertThat(parsed("service-interface[provider::name = 'BPP']"),
@@ -86,6 +90,22 @@ filter_test_() ->
                                   {operator,"like"},
                                   {literal, "John%"}]}}])))}].
 
+literal_handling_test_() ->
+    [{"single logical conjunction",
+     ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 18]"),
+                  is(equal_to([{{type_name_predicate,"Person"},
+                                {filter_expression,
+                                 [{conjunction,
+                                   [[{default_axis,
+                                      {member_name,"name"}},
+                                     {operator,"like"},
+                                     {literal,"Joe"}],
+                                    [{default_axis,
+                                      {member_name,"age"}},
+                                     {operator,">"},
+                                     {literal,
+                                      {integer,18}}]]}]}}])))}].
+
 logical_operator_test_() ->
     [{"single logical conjunction",
      ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND ::name like 'Joe']"),
@@ -118,7 +138,7 @@ logical_operator_test_() ->
       {"mixed disjunctions and conjunctions",
       ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND "
                                  "::name like 'Joe' OR "
-                                 "::contact_details contains 'Besborough']"),
+                                 "consumer::contact_details contains 'Besborough']"),
                    is(equal_to([{{type_name_predicate, "Person"},
                              {filter_expression,    
                                 [{disjunction,
@@ -129,7 +149,8 @@ logical_operator_test_() ->
                                      [{default_axis, {member_name, "name"}},
                                      {operator, "like"},
                                      {literal, "Joe"}]]}],
-                                    [{default_axis, {member_name, "contact_details"}},
+                                    [{{axis, "consumer"}, 
+                                        {member_name, "contact_details"}},
                                   {operator, "contains"},
                                   {literal, "Besborough"}]]}]}}])))}].
 

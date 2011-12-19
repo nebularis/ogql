@@ -17,7 +17,8 @@ main(_) ->
     run_query("Person[::post-code starts_with 'SE9' AND ::name like 'Joe']"),
     run_query("Person[::post-code starts_with 'SE9' AND "
                                 "::name like 'Joe' OR "
-                                "::contact_details contains 'Besborough']").
+                                "::contact_details contains 'Besborough']"),
+    run_query("Person[::name like 'Joe' AND ::age > 18]").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

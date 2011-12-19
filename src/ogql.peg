@@ -21,7 +21,12 @@ operator                <- '=' / '>' / '<' / '!=' / '@' /
                            'eq' / 'gt' / 'lt' / 'neq' / 'lteq' / 'gteq' /
                            'like' / 'matches' / 'contains' / 'in' / 
                            'starts_with' / 'ends_with' / 'path_exists' ;
-literal                 <- "'" (!"'" .)* "'" ;
+literal                 <- literal_string / literal_number / constant ;
+literal_string          <- "'" (!"'" .)* "'" ;
+literal_number          <- literal_int / literal_float ;
+literal_int             <- [0-9]+ ;
+literal_float           <- [0-9\\.]+ ;                                                                                                                          
+constant                <- ":" word+ ;
 index                   <- [0-9]+ ;
 word                    <- [\\w\\-_]+ ;
 space                   <- [ \\t\\n\\s\\r] / crlf ;
