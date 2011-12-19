@@ -41,6 +41,14 @@ filter_test_() ->
                                     {{axis,"provider"},{member_name,"name"}},
                                     {operator,"="},
                                     {literal,"BPP"}]}}])))},
+     {"filtering by member names containing unusual characters",
+      ?_assertThat(parsed("Person[::post-code starts_with 'SE9']"),
+                  is(equal_to([{{type_name_predicate,"Person"},
+                                 {filter_expression,
+                                  [{default_axis,
+                                    {member_name,"post-code"}},
+                                   {operator,"starts_with"},
+                                   {literal,"SE9"}]}}])))},
      {"filtering with pseudo-function as operator",
       ?_assertThat(parsed("service-interface[consumer::processId starts_with '1349']"),
                   is(equal_to([{{implicit_name_predicate, "service-interface"},
@@ -67,7 +75,7 @@ filter_test_() ->
     {"filtering with white space between steps",
      ?_assertThat(parsed("Department[::region = 'Greater London'],
                             Employee[::firstName like 'John%']"),
-                  is(equal_to([{{type_name_predicate, "Department"},
+                 is(equal_to([{{type_name_predicate, "Department"},
                                 {filter_expression,
                                  [{default_axis, {member_name, "region"}},
                                   {operator,"="},
@@ -77,6 +85,36 @@ filter_test_() ->
                                  [{default_axis, {member_name, "firstName"}},
                                   {operator,"like"},
                                   {literal, "John%"}]}}])))}].
+
+logical_operator_test_() ->
+    [{"single logical conjunction",
+     ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND ::name like 'Joe']"),
+                  is(equal_to([{{type_name_predicate, "Person"},
+                               {filter_expression, [
+                                {conjunction,
+                                  [[{default_axis, {member_name, "post-code"}},
+                                    {operator, "starts_with"},
+                                    {literal, "SE9"}],
+                                   [{default_axis, {member_name, "name"}},
+                                    {operator, "like"},
+                                    {literal, "Joe"}]]}]}}])))},
+     {"multiple logical conjunctions",
+     ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND "
+                                "::name like 'Joe' AND "
+                                "::contact_details contains 'Besborough']"),
+                  is(equal_to([{{type_name_predicate, "Person"},
+                                 {filter_expression, [
+                                    {conjunction,
+                                        [[{conjunction,
+                                          [[{default_axis, {member_name, "post-code"}},
+                                            {operator, "starts_with"},
+                                            {literal, "SE9"}],
+                                           [{default_axis, {member_name, "name"}},
+                                            {operator, "like"},
+                                            {literal, "Joe"}]]}],
+                                     [{default_axis, {member_name, "contact_details"}},
+                                      {operator, "contains"},
+                                      {literal, "Besborough"}]]}]}}])))}].
 
 parsed(Q) ->
     ogql_grammar:parse(Q).

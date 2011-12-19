@@ -28,6 +28,15 @@ transform('query', Node, _) ->
       [""] -> [];
       _ -> drop_sep(Node)
     end;
+transform(expression_list, Node, _) ->
+    case Node of
+        [] -> [];
+        [""] -> [];
+        _ ->
+            H = proplists:get_value(head, Node),
+            T = [ {J, P} || [J, P] <- proplists:get_value(tail, Node)],
+            [H|T]
+    end;
 transform(name_predicate, Node, _) ->
     predicate(implicit_name_predicate, Node);
 transform(type_predicate, Node, _) ->
@@ -78,19 +87,26 @@ predicate(Type, Node) ->
             {Type, bin_parts_to_string(Word)};
         [[[_, Word]],[]] ->
             {Type, bin_parts_to_string(Word)};
-        [[[_, Word]],
-            {bracketed_expression, [[_,
-                [[_, {expression, Expr}]], _]]}] ->
-            {{Type, bin_parts_to_string(Word)}, {filter_expression, strip(Expr)}};
-        [[Word],
-            {bracketed_expression, [[_,
-                [[_, {expression, Expr}]], _]]}] ->
-            {{Type, bin_parts_to_string(Word)}, {filter_expression, strip(Expr)}};
+        [[Word], {bracketed_expression, [_, [[_, ExpressionList]], _]}] ->
+            {{Type, bin_parts_to_string(Word)}, 
+                {filter_expression, reduce(ExpressionList)}};
+        [[[_, Word]],  {bracketed_expression, [_, [[_, ExpressionList]], _]}] ->
+                {{Type, bin_parts_to_string(Word)}, 
+                 {filter_expression, reduce(ExpressionList)}};
         _ ->
             {Type, Node}
     end.
 
+reduce(ExprList) ->
+    lists:flatten(lists:foldl(fun combine_expressions/2, [], ExprList)).
+
+combine_expressions({expression, Expr}, Acc) ->
+    Acc ++ strip(Expr);
+combine_expressions({{junction, {Type, _}}, {expression, Expr}}, Acc) ->
+    [{Type, [Acc, strip(Expr)]}].
+
 strip(Expr) ->
+    io:format("Strip ~p~n", [Expr]),
     [ X || X <- Expr, X /= <<" ">> andalso X /= [] ].
 
 bin_parts_to_string(Parts) when is_binary(Parts) ->
