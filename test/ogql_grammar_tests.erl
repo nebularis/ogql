@@ -106,7 +106,7 @@ accessing_edge_nodes_test_() ->
                                         {member_name, {internal, "description"}}},
                                         {operator, "contains"},
                                         {literal, "APMO"}]]}]}}])))},
-    {"access to 'special' object fields",
+    {"access to object fields via fully qualified names",
      ?_assertThat(parsed("?[::$(version.major) > 10 AND 
                             ::$(lastmodified.user) = 991726352]"),
                  is(equal_to([{{type_name_predicate, "?"},
@@ -115,11 +115,32 @@ accessing_edge_nodes_test_() ->
                                  [[{default_axis,
                                     {member_name, {internal, {"version", "major"}}}},
                                    {operator,">"},
-                                   {literal, {integer,10}}],
+                                   {literal, 10}],
                                   [{default_axis,
                                     {member_name, {internal, {"lastmodified", "user"}}}},
                                    {operator,"="},
-                                   {literal, {integer, 991726352}}]]}]}}])))}].
+                                   {literal, 991726352}]]}]}}])))},
+    {"access to fully qualified version numbers",
+    ?_assertThat(parsed("?[::$(version.major) = 2 AND 
+                           ::$(version.minor) = 0 AND 
+                           ::$(version.build) = 1]"),
+                is(equal_to([{{type_name_predicate,"?"},
+                             {filter_expression,
+                              [{conjunction,
+                                [[{conjunction,
+                                   [[{default_axis, {member_name,
+                                       {internal, {"version", "major"}}}},
+                                     {operator,"="},
+                                     {literal, 2}],
+                                    [{default_axis,
+                                      {member_name, {internal,
+                                        {"version", "minor"}}}},
+                                     {operator,"="},
+                                     {literal, 0}]]}],
+                                 [{default_axis, {member_name, 
+                                   {internal, {"version","build"}}}},
+                                  {operator,"="},
+                                  {literal, 1}]]}]}}])))}].
 
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
@@ -132,7 +153,7 @@ literal_handling_test_() ->
                                      {literal,"Joe"}],
                                     [{default_axis, {member_name,"age"}},
                                      {operator,">"},
-                                     {literal, {integer, 18}}]]}]}}])))},
+                                     {literal, 18}]]}]}}])))},
      {"separate handling of strings and floats",
       ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 21.65]"),
                    is(equal_to([{{type_name_predicate,"Person"},
@@ -143,7 +164,7 @@ literal_handling_test_() ->
                                       {literal,"Joe"}],
                                      [{default_axis, {member_name,"age"}},
                                       {operator,">"},
-                                      {literal, {float, 21.65}}]]}]}}])))},
+                                      {literal, 21.65}]]}]}}])))},
      {"date handling is done via a pseudo-function",
      ?_assertThat(parsed("Person[::date-of-birth > DATE(21-3-1972)]"),
           contains_date_literal({1972,3,21}))}].
@@ -153,13 +174,9 @@ contains_date_literal(Date) ->
         case (AST) of
             [{{type_name_predicate,"Person"},
                {filter_expression,
-                [{default_axis,
-                  {member_name,
-                   "date-of-birth"}},
+                [{default_axis, {member_name, "date-of-birth"}},
                  {operator,">"},
-                 {literal,
-                  {date,
-                   {Date, _}}}]}}] -> true;
+                 {literal, {date, {Date, _}}}]}}] -> true;
             _ -> false
         end
     end.

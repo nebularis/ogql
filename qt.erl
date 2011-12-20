@@ -23,7 +23,10 @@ main(_) ->
     run_query("?[::$(name) = 'Caller' AND 
                             ::$(description) contains 'APMO']"),
     run_query("?[::$(version.major) > 10 AND 
-                 ::$(lastmodified.user) = 991726352]").
+                 ::$(lastmodified.user) = 991726352]"),
+    run_query("?[::$(version.major) = 2 AND 
+                 ::$(version.minor) = 0 AND 
+                 ::$(version.build) = 1]").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

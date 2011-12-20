@@ -70,9 +70,9 @@ transform(literal, {date, [_, Data, _]}, _) ->
     io:format("Parse date string ~s~n", [DateString]),
     {literal, {date, dh_date:parse(DateString)}};
 transform(literal, {literal_int, Data}, _) ->
-    {literal, {integer, list_to_integer(bin_parts_to_string(Data))}};
+    {literal, list_to_integer(bin_parts_to_string(Data))};
 transform(literal, {literal_float, Data}, _) ->
-    {literal, {float, list_to_float(bin_parts_to_string(Data))}};
+    {literal, list_to_float(bin_parts_to_string(Data))};
 transform(literal, {literal_string, Node}, _) ->
     [_, Data, _] = Node,
     {literal, bin_parts_to_string(Data)};
@@ -124,7 +124,6 @@ combine_expressions({{junction, {Type, _}}, {expression, Expr}}, Acc) ->
     [{Type, [Acc, strip(Expr)]}].
 
 strip(Expr) ->
-    io:format("Strip ~p~n", [Expr]),
     [ X || X <- Expr, X /= <<" ">> andalso X /= [] ].
 
 bin_parts_to_string(Parts) when is_binary(Parts) ->
