@@ -112,7 +112,19 @@ literal_handling_test_() ->
                                       {literal,"Joe"}],
                                      [{default_axis, {member_name,"age"}},
                                       {operator,">"},
-                                      {literal, {float, 21.65}}]]}]}}])))}].
+                                      {literal, {float, 21.65}}]]}]}}])))},
+     {"date handling is done via a pseudo-function",
+     ?_assertThat(parsed("Person[::date-of-birth > DATE(21-3-1972)]"),
+          contains_date_literal({1972,3,21}))}].
+
+contains_date_literal(_) ->
+    fun (AST) -> 
+        case (AST) of
+            [{_, {_, [{literal,
+                  {date, {D2, _}}}]}}] -> true;
+            _ -> false
+        end
+    end.
 
 logical_operator_test_() ->
     [{"single logical conjunction",
@@ -148,7 +160,7 @@ logical_operator_test_() ->
                                  "::name like 'Joe' OR "
                                  "consumer::contact_details contains 'Besborough']"),
                    is(equal_to([{{type_name_predicate, "Person"},
-                             {filter_expression,    
+                             {filter_expression,
                                 [{disjunction,
                                     [[{conjunction,
                                       [[{default_axis, {member_name, "post-code"}},
@@ -157,7 +169,7 @@ logical_operator_test_() ->
                                      [{default_axis, {member_name, "name"}},
                                      {operator, "like"},
                                      {literal, "Joe"}]]}],
-                                    [{{axis, "consumer"}, 
+                                    [{{axis, "consumer"},
                                         {member_name, "contact_details"}},
                                   {operator, "contains"},
                                   {literal, "Besborough"}]]}]}}])))}].

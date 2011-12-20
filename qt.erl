@@ -1,5 +1,5 @@
 #!/usr/bin/env escript
-%%! -pa ebin
+%%! -pa ebin -pa deps/dh_date/ebin
 -module(qt).
 -compile(export_all).
 
@@ -18,7 +18,8 @@ main(_) ->
     run_query("Person[::post-code starts_with 'SE9' AND "
                                 "::name like 'Joe' OR "
                                 "::contact_details contains 'Besborough']"),
-    run_query("Person[::name like 'Joe' AND ::age > 18.5]").
+    run_query("Person[::name like 'Joe' AND ::age > 18.5]"),
+    run_query("Person[::date-of-birth > DATE(21-3-1972)]").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

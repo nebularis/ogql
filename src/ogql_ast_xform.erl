@@ -56,6 +56,10 @@ transform(data_point, [Axis, _, Member], _) ->
         _ ->
             {Axis, Member}
     end;
+transform(literal, {date, [_, Data, _]}, _) ->
+    DateString = bin_parts_to_string(Data),
+    io:format("Parse date string ~s~n", [DateString]),
+    {literal, {date, dh_date:parse(DateString)}};
 transform(literal, {literal_int, Data}, _) ->
     {literal, {integer, list_to_integer(bin_parts_to_string(Data))}};
 transform(literal, {literal_float, Data}, _) ->
