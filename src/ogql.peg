@@ -16,7 +16,7 @@ data_point              <- axis? '::' member_name ;
 axis                    <- normative_axis / backreference '.' normative_axis ;
 normative_axis          <- 'provider' / 'consumer' / 'left' / 'right' ;
 backreference           <- (&'@' index)+ ;
-member_name             <- (![A-Z] word)+ / axis_predicate ;
+member_name             <- '$(' (!')' .)+ ')' / (![A-Z] word)+ / axis_predicate ;
 operator                <- '=' / '>' / '<' / '!=' / '@' /
                            'eq' / 'gt' / 'lt' / 'neq' / 'lteq' / 'gteq' /
                            'like' / 'matches' / 'contains' / 'in' / 
@@ -29,7 +29,7 @@ literal_int             <- [0-9]+ ;
 date                    <- 'DATE(' (!')' .)* ')' ;
 constant                <- ":" word+ ;
 index                   <- [0-9]+ ;
-word                    <- [\\w\\-_\\$]+ ;
+word                    <- [\\w\\-_]+ ;
 space                   <- [ \\t\\n\\s\\r] / crlf ;
 crlf                    <- [\\r]? [\\n] ;
 sep                     <- (space+)? ',' (space+)? ;

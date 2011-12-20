@@ -47,6 +47,13 @@ transform(anything_predicate, Node, _) ->
     predicate(any_type_predicate, Node);
 transform(filter_predicate, Node, _) ->
     predicate(filter_predicate, Node);
+transform(member_name, [<<"$(">>, Data, <<")">>], _) ->
+    case string:tokens(bin_parts_to_string(Data), ".") of
+        [Token] ->
+            {member_name, {internal, Token}};
+        Tokens when is_list(Tokens) ->
+            {member_name, {internal, list_to_tuple(Tokens)}}
+    end;
 transform(member_name, [[_,[<<"$">>|Parts]]], _) ->
     {member_name, {internal, bin_parts_to_string(Parts)}};
 transform(data_point, [[], Member], _) ->

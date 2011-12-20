@@ -91,9 +91,9 @@ filter_test_() ->
                                   {literal, "John%"}]}}])))}].
 
 accessing_edge_nodes_test_() ->
-    [{"access to basic object fields",
-     ?_assertThat(parsed("?[::$name = 'Caller' AND 
-                            ::$description contains 'APMO']"),
+    [{"access to 'special' object fields",
+     ?_assertThat(parsed("?[::$(name) = 'Caller' AND 
+                            ::$(description) contains 'APMO']"),
                  is(equal_to([{{type_name_predicate, "?"},
                                 {filter_expression,
                                   [{conjunction,
@@ -105,7 +105,21 @@ accessing_edge_nodes_test_() ->
                                      [{default_axis,
                                         {member_name, {internal, "description"}}},
                                         {operator, "contains"},
-                                        {literal, "APMO"}]]}]}}])))}].
+                                        {literal, "APMO"}]]}]}}])))},
+    {"access to 'special' object fields",
+     ?_assertThat(parsed("?[::$(version.major) > 10 AND 
+                            ::$(lastmodified.user) = 991726352]"),
+                 is(equal_to([{{type_name_predicate, "?"},
+                              {filter_expression,
+                               [{conjunction,
+                                 [[{default_axis,
+                                    {member_name, {internal, {"version", "major"}}}},
+                                   {operator,">"},
+                                   {literal, {integer,10}}],
+                                  [{default_axis,
+                                    {member_name, {internal, {"lastmodified", "user"}}}},
+                                   {operator,"="},
+                                   {literal, {integer, 991726352}}]]}]}}])))}].
 
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
