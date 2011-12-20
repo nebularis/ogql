@@ -19,7 +19,9 @@ main(_) ->
                                 "::name like 'Joe' OR "
                                 "::contact_details contains 'Besborough']"),
     run_query("Person[::name like 'Joe' AND ::age > 18.5]"),
-    run_query("Person[::date-of-birth > DATE(21-3-1972)]").
+    run_query("Person[::date-of-birth > DATE(21-3-1972)]"),
+    run_query("?[::$name = 'Caller' AND 
+                            ::$description contains 'APMO']").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

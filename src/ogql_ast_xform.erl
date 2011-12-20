@@ -47,6 +47,8 @@ transform(anything_predicate, Node, _) ->
     predicate(any_type_predicate, Node);
 transform(filter_predicate, Node, _) ->
     predicate(filter_predicate, Node);
+transform(member_name, [[_,[<<"$">>|Parts]]], _) ->
+    {member_name, {internal, bin_parts_to_string(Parts)}};
 transform(data_point, [[], Member], _) ->
     Member;
 transform(data_point, [Axis, _, Member], _) ->

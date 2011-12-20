@@ -90,6 +90,23 @@ filter_test_() ->
                                   {operator,"like"},
                                   {literal, "John%"}]}}])))}].
 
+accessing_edge_nodes_test_() ->
+    [{"access to basic object fields",
+     ?_assertThat(parsed("?[::$name = 'Caller' AND 
+                            ::$description contains 'APMO']"),
+                 is(equal_to([{{type_name_predicate, "?"},
+                                {filter_expression,
+                                  [{conjunction,
+                                    [ [
+                                     {default_axis, 
+                                        {member_name, {internal, "name"}}},
+                                        {operator, "="},
+                                        {literal, "Caller"}],
+                                     [{default_axis,
+                                        {member_name, {internal, "description"}}},
+                                        {operator, "contains"},
+                                        {literal, "APMO"}]]}]}}])))}].
+
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
      ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 18]"),
@@ -117,11 +134,18 @@ literal_handling_test_() ->
      ?_assertThat(parsed("Person[::date-of-birth > DATE(21-3-1972)]"),
           contains_date_literal({1972,3,21}))}].
 
-contains_date_literal(_) ->
+contains_date_literal(Date) ->
     fun (AST) -> 
         case (AST) of
-            [{_, {_, [{literal,
-                  {date, {D2, _}}}]}}] -> true;
+            [{{type_name_predicate,"Person"},
+               {filter_expression,
+                [{default_axis,
+                  {member_name,
+                   "date-of-birth"}},
+                 {operator,">"},
+                 {literal,
+                  {date,
+                   {Date, _}}}]}}] -> true;
             _ -> false
         end
     end.
