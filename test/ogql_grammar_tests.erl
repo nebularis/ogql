@@ -22,6 +22,7 @@
 -module(ogql_grammar_tests).
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("hamcrest/include/hamcrest.hrl").
+-include_lib("semver/include/semver.hrl").
 
 basic_parsing_test() ->
     ?assertThat(parsed("platformSystem"),
@@ -142,6 +143,21 @@ accessing_edge_nodes_test_() ->
                                   {operator,"="},
                                   {literal, 1}]]}]}}])))}].
 
+%% TODO: test version number handling....
+version_handling_test_() ->
+    [{"full version number yields semver record",
+     ?_assertThat(parsed("?[::$(version) > VSN(1.6.13-RC2)]"),
+                  is(equal_to([{{type_name_predicate,"?"},
+                                                         {filter_expression,
+                                                          [{default_axis,
+                                                            {member_name,{internal,"version"}}},
+                                                           {operator,">"},
+                                                           {literal,
+                                                            #semver{major=1,
+                                                                    minor=6,
+                                                                    build=13,
+                                                                    patch="RC2"}}]}}])))}].
+                  
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
      ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 18]"),
@@ -168,18 +184,6 @@ literal_handling_test_() ->
      {"date handling is done via a pseudo-function",
      ?_assertThat(parsed("Person[::date-of-birth > DATE(21-3-1972)]"),
           contains_date_literal({1972,3,21}))}].
-
-contains_date_literal(Date) ->
-    fun (AST) -> 
-        case (AST) of
-            [{{type_name_predicate,"Person"},
-               {filter_expression,
-                [{default_axis, {member_name, "date-of-birth"}},
-                 {operator,">"},
-                 {literal, {date, {Date, _}}}]}}] -> true;
-            _ -> false
-        end
-    end.
 
 logical_operator_test_() ->
     [{"single logical conjunction",
@@ -229,6 +233,21 @@ logical_operator_test_() ->
                                   {operator, "contains"},
                                   {literal, "Besborough"}]]}]}}])))}].
 
+%%
+%% Utility functions and custom Hamcrest matchers
+%%
+
 parsed(Q) ->
     ogql_grammar:parse(Q).
 
+contains_date_literal(Date) ->
+    fun (AST) -> 
+        case (AST) of
+            [{{type_name_predicate,"Person"},
+               {filter_expression,
+                [{default_axis, {member_name, "date-of-birth"}},
+                 {operator,">"},
+                 {literal, {date, {Date, _}}}]}}] -> true;
+            _ -> false
+        end
+    end.

@@ -1,5 +1,5 @@
 #!/usr/bin/env escript
-%%! -pa ebin -pa deps/dh_date/ebin
+%%! -pa ebin -pa deps/dh_date/ebin -pa deps/semver/ebin
 -module(qt).
 -compile(export_all).
 
@@ -26,7 +26,8 @@ main(_) ->
                  ::$(lastmodified.user) = 991726352]"),
     run_query("?[::$(version.major) = 2 AND 
                  ::$(version.minor) = 0 AND 
-                 ::$(version.build) = 1]").
+                 ::$(version.build) = 1]"),
+    run_query("?[::$(version) > VSN(1.6.13-RC2)]").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

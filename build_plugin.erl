@@ -23,10 +23,12 @@
 -export([pre_compile/2, clean/2, pre_eunit/2]).
 
 pre_compile(_, _) ->
+    rebar_log:log(debug, "plugin working in ~s~n", [rebar_utils:get_cwd()]),
     case rebar_plugin_manager:is_base_dir() of
         true ->
             file:make_dir("generated");
         false ->
+            rebar_log:log(debug, "Not base_dir~n", []),
             ok
     end,
     ok.
