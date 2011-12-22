@@ -82,6 +82,10 @@ transform(literal, {literal_float, Data}, _) ->
 transform(literal, {literal_string, Node}, _) ->
     [_, Data, _] = Node,
     {literal, bin_parts_to_string(Data)};
+transform(constant, [_,Data], _) ->
+    {constant, list_to_atom(bin_parts_to_string(Data))};
+transform(boolean, Node, _) ->
+    {boolean, list_to_atom(string:to_lower(bin_parts_to_string(Node)))};
 transform(NonTerminal, Node, _) ->
     case is_identifier(NonTerminal) of
         true ->

@@ -22,6 +22,7 @@ main(_) ->
                                 "::contact_details contains 'Besborough']"),
     run_query("Person[::name like 'Joe' AND ::age > 18.5]"),
     run_query("Person[::date-of-birth > DATE(21-3-1972)]"),
+    run_query("Service[::is-daemon = TRUE OR ::active = FALSE]"),
     io:format("Filter predicates on `internal' fields...~n"),
     run_query("?[::$(name) = 'Caller' AND 
                             ::$(description) contains 'APMO']"),
@@ -32,8 +33,9 @@ main(_) ->
                  ::$(version.build) = 1]"),
     run_query("?[::$(version) > VSN(1.6.13-RC2)]"),
     io:format("Examples of grouping...~n"),
-    run_query("server-interface,(interface-client,interface-api)"),
-    run_query("server-interface,{interface-client,client-sla,sla-groups}").
+    run_query("server-interface,
+              (interface-client[consumer::classification = 'STRATEGIC'],interface-api)"),
+    run_query("server-interface,{interface-client,client-sla,(sla-groups,sla-documents)}").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

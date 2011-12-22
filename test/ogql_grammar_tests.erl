@@ -144,19 +144,18 @@ accessing_edge_nodes_test_() ->
                                   {literal, 1}]]}]}}])))}].
 
 %% TODO: test version number handling....
-version_handling_test_() ->
-    [{"full version number yields semver record",
-     ?_assertThat(parsed("?[::$(version) > VSN(1.6.13-RC2)]"),
-                  is(equal_to([{{type_name_predicate,"?"},
-                                                         {filter_expression,
-                                                          [{default_axis,
-                                                            {member_name,{internal,"version"}}},
-                                                           {operator,">"},
-                                                           {literal,
-                                                            #semver{major=1,
-                                                                    minor=6,
-                                                                    build=13,
-                                                                    patch="RC2"}}]}}])))}].
+version_handling_test() ->
+     ?assertThat(parsed("?[::$(version) > VSN(1.6.13-RC2)]"),
+                 is(equal_to([{{type_name_predicate,"?"},
+                                 {filter_expression,
+                                  [{default_axis,
+                                    {member_name,{internal,"version"}}},
+                                   {operator,">"},
+                                   {literal,
+                                    #semver{major=1,
+                                            minor=6,
+                                            build=13,
+                                            patch="RC2"}}]}}]))).
                   
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
@@ -183,7 +182,18 @@ literal_handling_test_() ->
                                       {literal, 21.65}]]}]}}])))},
      {"date handling is done via a pseudo-function",
      ?_assertThat(parsed("Person[::date-of-birth > DATE(21-3-1972)]"),
-          contains_date_literal({1972,3,21}))}].
+          contains_date_literal({1972,3,21}))},
+     {"date handling is done via a pseudo-function",
+     ?_assertThat(parsed("Service[::is-daemon = TRUE OR ::active = FALSE]"),
+          is(equal_to([{{type_name_predicate, "Service"},
+                           {filter_expression,
+                            [{disjunction,
+                              [[{default_axis, {member_name, "is-daemon"}},
+                                {operator,"="},
+                                {literal, {boolean,true}}],
+                               [{default_axis, {member_name, "active"}},
+                                {operator,"="},
+                                {literal, {boolean, false}}]]}]}}])))}].
 
 logical_operator_test_() ->
     [{"single logical conjunction",
