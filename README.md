@@ -1,4 +1,4 @@
-# Object Graph Qualification Language.
+# Object Graph Qualification Language [![travis](https://secure.travis-ci.org/nebularis/ogql.png)](http://travis-ci.org/nebularis/ogql)
 
 This library implements a parser for the query syntax described in the OGQL
 specification, which can be found
