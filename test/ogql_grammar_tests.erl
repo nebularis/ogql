@@ -198,8 +198,7 @@ literal_handling_test_() ->
      ?_assertThat(parsed("Service[::classification = :strategic]"),
            is(equal_to([{{type_name_predicate,"Service"},
                             {filter_expression,
-                             [{default_axis,
-                               {member_name, "classification"}},
+                             [{default_axis, {member_name, "classification"}},
                               {operator,"="},
                               {literal, {constant, strategic}}]}}])))}].
 
@@ -250,6 +249,39 @@ logical_operator_test_() ->
                                         {member_name, "contact_details"}},
                                   {operator, "contains"},
                                   {literal, "Besborough"}]]}]}}])))}].
+
+grouping_test_() ->
+    [{"fixed order grouping",
+     ?_assertThat(parsed("a-b,(b-c, b-d)"),
+        is(equal_to([{implicit_name_predicate,"a-b"},
+                        {fixed_order_group,[
+                            {implicit_name_predicate,"b-c"},
+                            {implicit_name_predicate,"b-d"}]}])))},
+     {"traversal order grouping",
+     ?_assertThat(parsed("a-b,{b-c, c-d}"),
+        is(equal_to([{implicit_name_predicate,"a-b"},
+                        {traversal_order_group,[
+                            {implicit_name_predicate,"b-c"},
+                            {implicit_name_predicate,"c-d"}]}])))},
+     {"nested grouping with filter predicates",
+     ?_assertThat(parsed("server-interface,
+                            {interface-client[::group = :b2b],
+                                client-sla,(sla-groups[::$(key) = :b2b],sla-documents)}"),
+        is(equal_to([{implicit_name_predicate, "server-interface"},
+                      {traversal_order_group,
+                         [{{implicit_name_predicate, "interface-client"},
+                           {filter_expression,
+                            [{default_axis, {member_name, "group"}},
+                             {operator, "="},
+                             {literal, {constant, b2b}}]}},
+                          {implicit_name_predicate, "client-sla"},
+                          {fixed_order_group,
+                            [{{implicit_name_predicate, "sla-groups"},
+                             {filter_expression,
+                              [{default_axis, {member_name, {internal, "key"}}},
+                               {operator, "="},
+                               {literal, {constant, b2b}}]}},
+                            {implicit_name_predicate, "sla-documents"}]}]}])))}].
 
 %%
 %% Utility functions and custom Hamcrest matchers

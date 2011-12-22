@@ -34,9 +34,12 @@ main(_) ->
                  ::$(version.build) = 1]"),
     run_query("?[::$(version) > VSN(1.6.13-RC2)]"),
     io:format("Examples of grouping...~n"),
+    run_query("a-b,(b-c, b-d)"),
     run_query("server-interface,
               (interface-client[consumer::classification = 'STRATEGIC'],interface-api)"),
-    run_query("server-interface,{interface-client,client-sla,(sla-groups,sla-documents)}").
+    run_query("server-interface,
+                {interface-client[::group = :b2b],
+                    client-sla,(sla-groups[::$(key) = :b2b],sla-documents)}").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).
