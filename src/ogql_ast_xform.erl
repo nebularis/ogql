@@ -22,6 +22,10 @@
 -module(ogql_ast_xform).
 -export([transform/3]).
 
+transform(Grouping, [_,[[_,Query]],_], _) 
+        when Grouping == fixed_order_group orelse
+             Grouping == traversal_order_group ->
+    {Grouping, Query};
 transform('query', Node, _) ->
     case Node of
       [] -> [];
@@ -97,7 +101,7 @@ transform(NonTerminal, Node, _) ->
 is_identifier(NonTerminal) ->
     lists:member(NonTerminal, 
         [word, space, crlf, sep, normative_axis, literal_number, 
-            data_point_or_literal, step]).
+            data_point_or_literal, step, grouping]).
 
 predicate(Type, Node) ->
     case Node of

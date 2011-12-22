@@ -1,5 +1,8 @@
 query                   <- head:step tail:(sep step)* ;
-step                    <- name_predicate / type_predicate / filter_predicate;
+step                    <- name_predicate / type_predicate / filter_predicate / grouping;
+grouping                <- fixed_order_group / traversal_order_group ;
+fixed_order_group       <- ('(' (!')' query)* ')') ;
+traversal_order_group   <- ('{' (!'}' query)* '}') ;
 name_predicate          <- (![A-Z] word)+ bracketed_expression? ;
 type_predicate          <- ('?' / (![a-z] word)+)+ bracketed_expression? ;
 axis_predicate          <- (&'^' (![A-Z] word))+ ;

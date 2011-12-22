@@ -25,4 +25,5 @@ build the project.
 These require a custom branch/fork of rebar, which can be found
 [here](https://github.com/hyperthunk/rebar/tree/econf).
 
-    $ rebar -C test.config get-deps compile eunit
+    $ ./rebar -C init.config get-deps
+    $ ./rebar -C test.config get-deps compile eunit -v
