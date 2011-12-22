@@ -23,6 +23,7 @@ main(_) ->
     run_query("Person[::name like 'Joe' AND ::age > 18.5]"),
     run_query("Person[::date-of-birth > DATE(21-3-1972)]"),
     run_query("Service[::is-daemon = TRUE OR ::active = FALSE]"),
+    run_query("Service[::classification = :strategic]"),
     io:format("Filter predicates on `internal' fields...~n"),
     run_query("?[::$(name) = 'Caller' AND 
                             ::$(description) contains 'APMO']"),

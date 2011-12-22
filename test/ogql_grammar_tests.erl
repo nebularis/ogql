@@ -183,7 +183,7 @@ literal_handling_test_() ->
      {"date handling is done via a pseudo-function",
      ?_assertThat(parsed("Person[::date-of-birth > DATE(21-3-1972)]"),
           contains_date_literal({1972,3,21}))},
-     {"date handling is done via a pseudo-function",
+     {"boolean handling via a built-in constants",
      ?_assertThat(parsed("Service[::is-daemon = TRUE OR ::active = FALSE]"),
           is(equal_to([{{type_name_predicate, "Service"},
                            {filter_expression,
@@ -193,7 +193,15 @@ literal_handling_test_() ->
                                 {literal, {boolean,true}}],
                                [{default_axis, {member_name, "active"}},
                                 {operator,"="},
-                                {literal, {boolean, false}}]]}]}}])))}].
+                                {literal, {boolean, false}}]]}]}}])))},
+     {"user defined constants",
+     ?_assertThat(parsed("Service[::classification = :strategic]"),
+           is(equal_to([{{type_name_predicate,"Service"},
+                            {filter_expression,
+                             [{default_axis,
+                               {member_name, "classification"}},
+                              {operator,"="},
+                              {literal, {constant, strategic}}]}}])))}].
 
 logical_operator_test_() ->
     [{"single logical conjunction",
