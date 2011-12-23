@@ -171,9 +171,20 @@ version_handling_test() ->
 recursive_join_operator_test_() ->
     [{"when applied to implicit name predicates",
      ?_assertThat(parsed("ancestry-person,*person-person"),
-                  is(equal_to([{implicit_name_predicate,"ancestry-person"},
-                               {recursive,
-                                {implicit_name_predicate, "person-person"}}])))}].
+            is(equal_to([{implicit_name_predicate,"ancestry-person"},
+                            {recursive,
+                            {implicit_name_predicate, "person-person"}}])))},
+     {"when applied to fixed order groups",
+     ?_assertThat(parsed("platform-system,
+            *((system-system,system-interface),
+                interface-system)"),
+            is(equal_to([{implicit_name_predicate,"platform-system"},
+                          {recursive,
+                           {fixed_order_group,
+                            [{fixed_order_group,
+                              [{implicit_name_predicate, "system-system"},
+                               {implicit_name_predicate, "system-interface"}]},
+                             {implicit_name_predicate, "interface-system"}]}}])))}].
                   
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
