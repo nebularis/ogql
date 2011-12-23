@@ -45,7 +45,8 @@ main(_) ->
     run_query("ancestry-person,*person-person"),
     run_query("platform-system,
             *((system-system,system-interface),
-                interface-system)").
+                interface-system)"),
+    run_query("$root(John),*{personRoles,roleRelationship}").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

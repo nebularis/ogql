@@ -184,7 +184,14 @@ recursive_join_operator_test_() ->
                             [{fixed_order_group,
                               [{implicit_name_predicate, "system-system"},
                                {implicit_name_predicate, "system-interface"}]},
-                             {implicit_name_predicate, "interface-system"}]}}])))}].
+                             {implicit_name_predicate, "interface-system"}]}}])))},
+     {"when applied to traversal order groups",
+     ?_assertThat(parsed("$root(John),*{personRoles,roleRelationship}"),
+            is(equal_to([{root_branch_filter, [{asset_name,"John"}]},
+                        {recursive,
+                         {traversal_order_group,
+                          [{implicit_name_predicate, "personRoles"},
+                           {implicit_name_predicate, "roleRelationship"}]}}])))}].
                   
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
