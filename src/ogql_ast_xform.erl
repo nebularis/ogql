@@ -22,6 +22,9 @@
 -module(ogql_ast_xform).
 -export([transform/3]).
 
+-type ast_node() :: list(term()) | tuple(atom(), ast_node()).
+
+-spec transform(atom(), ast_node(), any()) -> ast_node().
 transform(Grouping, [_,[[_,Query]],_], _) 
         when Grouping == fixed_order_group orelse
              Grouping == traversal_order_group ->
