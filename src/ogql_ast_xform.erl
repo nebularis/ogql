@@ -61,8 +61,6 @@ transform(member_name, [<<"$(">>, Data, <<")">>], _) ->
         Tokens when is_list(Tokens) ->
             {member_name, {internal, list_to_tuple(Tokens)}}
     end;
-transform(member_name, [[_,[<<"$">>|Parts]]], _) ->
-    {member_name, {internal, bin_parts_to_string(Parts)}};
 transform(data_point, [[], Member], _) ->
     Member;
 transform(root_branch_filter, [_,[[_,{root_identifier, Node}]],_], _) ->
