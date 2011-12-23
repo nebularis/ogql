@@ -41,7 +41,8 @@ main(_) ->
                 {interface-client[::group = :b2b],
                     client-sla,(sla-groups[::$(key) = :b2b],sla-documents)}"),
     run_query("$root(SystemRequirements),require-doc,
-                $root(OperationalSpecifications-1.0.2),doc-owner").
+                $root(OperationalSpecifications-1.0.2),doc-owner"),
+    run_query("ancestry-person,*person-person").
 
 run_query(Query) ->
     io:format("~s => ~p~n", [Query, ogql_grammar:parse(Query)]).

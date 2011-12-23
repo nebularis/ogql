@@ -1,45 +1,49 @@
-query                   <- head:step tail:(sep step)* ;
-step                    <- root_branch_filter / name_predicate / type_predicate / filter_predicate / grouping;
-root_branch_filter      <- '$root(' (!')' root_identifier)+ ')' ;
-root_identifier         <- primary_asset_id ('-' semver)? ;
-primary_asset_id        <- index+ / asset_name+ ;
-asset_name              <- [\\w_]+ ;
-semver                  <- ([0-9]+ '.' [0-9]+ '.' [0-9]+) ;
-grouping                <- fixed_order_group / traversal_order_group ;
-fixed_order_group       <- ('(' (!')' query)* ')') ;
-traversal_order_group   <- ('{' (!'}' query)* '}') ;
-name_predicate          <- (![A-Z] word)+ bracketed_expression? ;
-type_predicate          <- ('?' / (![a-z] word)+)+ bracketed_expression? ;
-axis_predicate          <- (&'^' (![A-Z] word))+ ;
-filter_predicate        <- (&name_predicate bracketed_expression) /
-                           (&type_predicate bracketed_expression) ;
-bracketed_expression    <- ('[' (!']' expression_list)* ']') ;
-expression_list         <- head:expression tail:(junction expression)* ;
-junction                <- conjunction / disjunction ;
-conjunction             <- space+ 'AND' space+ ;
-disjunction             <- space+ 'OR'  space+ ;
-expression              <- data_point space? operator space? data_point_or_literal ;
-data_point_or_literal   <- data_point / literal ;
-data_point              <- axis? '::' member_name ;
-axis                    <- normative_axis / backreference '.' normative_axis ;
-normative_axis          <- 'provider' / 'consumer' / 'left' / 'right' ;
-backreference           <- (&'@' index)+ ;
-member_name             <- '$(' (!')' .)+ ')' / (![A-Z] word)+ / axis_predicate ;
-operator                <- '=' / '>' / '<' / '!=' / '@' /
-                           'eq' / 'gt' / 'lt' / 'neq' / 'lteq' / 'gteq' /
-                           'like' / 'matches' / 'contains' / 'in' / 
-                           'starts_with' / 'ends_with' / 'path_exists' ;
-literal                 <- literal_string / literal_number / date / version / boolean / constant ;
-literal_string          <- "'" (!"'" .)* "'" ;
-literal_number          <- literal_float / literal_int ;
-literal_float           <- [0-9]+ '.' [0-9]+ ;                                                                                                                         
-literal_int             <- [0-9]+ ;
-date                    <- 'DATE(' (!')' .)* ')' ;
-version                 <- 'VSN(' (!')' .)* ')' ;
-boolean                 <- 'TRUE' / 'FALSE' ;
-constant                <- ":" word+ ;
-index                   <- [0-9]+ ;
-word                    <- [\\w\\-_]+ ;
-space                   <- [ \\t\\n\\s\\r] / crlf ;
-crlf                    <- [\\r]? [\\n] ;
-sep                     <- (space+)? ',' (space+)? ;
+query                       <- head:step tail:(sep step)* ;
+step                        <- normative_step / recursive_step ;
+normative_step              <- root_branch_filter / name_predicate / 
+                                type_predicate / filter_predicate / grouping;
+recursive_step              <- '*' normative_step ;
+root_branch_filter          <- '$root(' (!')' root_identifier)+ ')' ;
+root_identifier             <- primary_asset_id ('-' semver)? ;
+primary_asset_id            <- index+ / asset_name+ ;
+grouping                    <- fixed_order_group / traversal_order_group ;
+fixed_order_group           <- ('(' (!')' query)* ')') ;
+traversal_order_group       <- ('{' (!'}' query)* '}') ;
+name_predicate              <- (![A-Z] word)+ bracketed_expression? ;
+type_predicate              <- ('?' / (![a-z] word)+)+ bracketed_expression? ;
+axis_predicate              <- (&'^' (![A-Z] word))+ ;
+filter_predicate            <- (&name_predicate bracketed_expression) /
+                                (&type_predicate bracketed_expression) ;
+bracketed_expression        <- ('[' (!']' expression_list)* ']') ;
+expression_list             <- head:expression tail:(junction expression)* ;
+junction                    <- conjunction / disjunction ;
+conjunction                 <- space+ 'AND' space+ ;
+disjunction                 <- space+ 'OR'  space+ ;
+expression                  <- data_point space? operator space? data_point_or_literal ;
+data_point_or_literal       <- data_point / literal ;
+data_point                  <- axis? '::' member_name ;
+axis                        <- normative_axis / backreference '.' normative_axis ;
+normative_axis              <- 'provider' / 'consumer' / 'left' / 'right' ;
+backreference               <- (&'@' index)+ ;
+member_name                 <- '$(' (!')' .)+ ')' / (![A-Z] word)+ / axis_predicate ;
+operator                    <- '=' / '>' / '<' / '!=' / '@' /
+                                'eq' / 'gt' / 'lt' / 'neq' / 'lteq' / 'gteq' /
+                                'like' / 'matches' / 'contains' / 'in' / 
+                                'starts_with' / 'ends_with' / 'path_exists' ;
+literal                     <- literal_string / literal_number / date / 
+                                version / boolean / constant ;
+literal_string              <- "'" (!"'" .)* "'" ;
+literal_number              <- literal_float / literal_int ;
+literal_float               <- [0-9]+ '.' [0-9]+ ;                                                                                                                         
+literal_int                 <- [0-9]+ ;
+date                        <- 'DATE(' (!')' .)* ')' ;
+version                     <- 'VSN(' (!')' .)* ')' ;
+boolean                     <- 'TRUE' / 'FALSE' ;
+constant                    <- ":" word+ ;
+index                       <- [0-9]+ ;
+asset_name                  <- [\\w_]+ ;
+semver                      <- ([0-9]+ '.' [0-9]+ '.' [0-9]+) ;
+word                        <- [\\w\\-_]+ ;
+space                       <- [ \\t\\n\\s\\r] / crlf ;
+crlf                        <- [\\r]? [\\n] ;
+sep                         <- (space+)? ',' (space+)? ;

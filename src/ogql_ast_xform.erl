@@ -63,6 +63,8 @@ transform(member_name, [<<"$(">>, Data, <<")">>], _) ->
     end;
 transform(data_point, [[], Member], _) ->
     Member;
+transform(recursive_step, [_,Node], _) ->
+    {recursive, Node};
 transform(root_branch_filter, [_,[[_,{root_identifier, Node}]],_], _) ->
     case Node of
         [{primary_asset_id, [AssetId]}, [<<"-">>, Version]] ->
@@ -117,7 +119,7 @@ transform(NonTerminal, Node, _) ->
 is_identifier(NonTerminal) ->
     lists:member(NonTerminal, 
         [word, space, crlf, sep, normative_axis, literal_number, 
-            data_point_or_literal, step, grouping]).
+            data_point_or_literal, step, grouping, normative_step]).
 
 predicate(Type, Node) ->
     case Node of

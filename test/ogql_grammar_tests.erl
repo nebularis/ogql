@@ -167,6 +167,13 @@ version_handling_test() ->
                                             minor=6,
                                             build=13,
                                             patch="RC2"}}]}}]))).
+
+recursive_join_operator_test_() ->
+    [{"when applied to implicit name predicates",
+     ?_assertThat(parsed("ancestry-person,*person-person"),
+                  is(equal_to([{implicit_name_predicate,"ancestry-person"},
+                               {recursive,
+                                {implicit_name_predicate, "person-person"}}])))}].
                   
 literal_handling_test_() ->
     [{"separate handling of strings and integers",
