@@ -34,6 +34,17 @@ multiple_path_steps_test() ->
                     [{implicit_name_predicate, "platformSystem"},
                      {implicit_name_predicate, "systemConsumingPlatform"}]))).
 
+root_branch_filter_test() ->
+    ?assertThat(parsed("$root(SystemRequirements),require-doc,
+                            $root(OperationalSpecifications-1.0.2),doc-owner"),
+                is(equal_to([{root_branch_filter,
+                              [{asset_name, "SystemRequirements"}]},
+                             {implicit_name_predicate, "require-doc"},
+                             {root_branch_filter,
+                                [{asset_name, "OperationalSpecifications"},
+                                 {version, #semver{major=1, minor=0, build=2}}]},
+                             {implicit_name_predicate, "doc-owner"}]))).
+
 %implicit_name_and_type_filter_equivalence_test() ->
 %    ?assertThat(parsed("Person"),
 %                is(equal_to(parsed("?[provider::$type = 'Person']"))).
@@ -282,6 +293,9 @@ grouping_test_() ->
                                {operator, "="},
                                {literal, {constant, b2b}}]}},
                             {implicit_name_predicate, "sla-documents"}]}]}])))}].
+
+%recursive_join_conditions_test_() ->
+%    [{}].
 
 %%
 %% Utility functions and custom Hamcrest matchers

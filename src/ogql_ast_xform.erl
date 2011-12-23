@@ -62,6 +62,17 @@ transform(member_name, [[_,[<<"$">>|Parts]]], _) ->
     {member_name, {internal, bin_parts_to_string(Parts)}};
 transform(data_point, [[], Member], _) ->
     Member;
+transform(root_branch_filter, [_,[[_,{root_identifier, Node}]],_], _) ->
+    case Node of
+        [{primary_asset_id, [AssetId]}, [<<"-">>, Version]] ->
+            {root_branch_filter, [AssetId, {version, Version}]};
+        [{primary_asset_id, [AssetId]}, []] ->
+            {root_branch_filter, [AssetId]}
+    end;
+transform(semver, Node, _) ->
+    semver:parse(bin_parts_to_string(Node));
+transform(asset_name, Node, _) ->
+    {asset_name, bin_parts_to_string(Node)};
 transform(data_point, [Axis, _, Member], _) ->
     case Axis of
         [] ->
