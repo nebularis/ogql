@@ -1,14 +1,16 @@
-query                       <- head:step tail:(sep step)* ;
-step                        <- normative_step / recursive_step ;
-normative_step              <- root_branch_filter / name_predicate / 
-                                type_predicate / filter_predicate / grouping;
-recursive_step              <- '*' normative_step ;
-root_branch_filter          <- '$root(' (!')' root_identifier)+ ')' ;
-root_identifier             <- primary_asset_id ('-' semver)? ;
-primary_asset_id            <- index+ / asset_name+ ;
-grouping                    <- fixed_order_group / traversal_order_group ;
-fixed_order_group           <- ('(' (!')' query)* ')') ;
-traversal_order_group       <- ('{' (!'}' query)* '}') ;
+query                       <- (intersection / union / set)+ subquery?;
+set                         <- (negated_traversal_operator / 
+                                recursion_operator)? (name_predicate / 
+                                                      type_predicate /
+                                                      filter_predicate /
+                                                      group) ;
+intersection                <- set intersect_operator query ;
+union                       <- set union_operator query ;
+subquery                    <- subquery_operator query ;
+group                       <- ('(' (!')' query)* ')') ;
+% root_branch_filter          <- '$root(' (!')' root_identifier)+ ')' ;
+% root_identifier             <- primary_asset_id ('-' semver)? ;
+%primary_asset_id            <- index+ / asset_name+ ;
 name_predicate              <- (![A-Z] word)+ bracketed_expression? ;
 type_predicate              <- ('?' / (![a-z] word)+)+ bracketed_expression? ;
 axis_predicate              <- (&'^' (![A-Z] word))+ ;
@@ -26,24 +28,28 @@ axis                        <- normative_axis / backreference '.' normative_axis
 normative_axis              <- 'provider' / 'consumer' / 'left' / 'right' ;
 backreference               <- (&'@' index)+ ;
 member_name                 <- '$(' (!')' .)+ ')' / (![A-Z] word)+ / axis_predicate ;
-operator                    <- '=' / '>' / '<' / '!=' / '@' /
-                                'eq' / 'gt' / 'lt' / 'neq' / 'lteq' / 'gteq' /
-                                'like' / 'matches' / 'contains' / 'in' / 
-                                'starts_with' / 'ends_with' / 'path_exists' ;
-literal                     <- literal_string / literal_number / date / 
-                                version / boolean / constant ;
+operator                    <- '@' / 'eq' / 'gt' / 'lt' / 'neq' / 'lteq' / 'gteq' /
+                                 'like' / 'matches' / 'contains' / 'in' /
+                                 'starts_with' / 'ends_with' / 'path_exists' ;
+literal                     <- literal_string / literal_number / date /
+                                 version / boolean / constant ;
 literal_string              <- "'" (!"'" .)* "'" ;
 literal_number              <- literal_float / literal_int ;
-literal_float               <- [0-9]+ '.' [0-9]+ ;                                                                                                                         
+literal_float               <- [0-9]+ '.' [0-9]+ ;
 literal_int                 <- [0-9]+ ;
 date                        <- 'DATE(' (!')' .)* ')' ;
 version                     <- 'VSN(' (!')' .)* ')' ;
 boolean                     <- 'TRUE' / 'FALSE' ;
 constant                    <- ":" word+ ;
 index                       <- [0-9]+ ;
-asset_name                  <- [\\w_]+ ;
-semver                      <- ([0-9]+ '.' [0-9]+ '.' [0-9]+) ;
+% asset_name                  <- [\\w_]+ ;
+% semver                      <- ([0-9]+ '.' [0-9]+ '.' [0-9]+) ;
 word                        <- [\\w\\-_]+ ;
 space                       <- [ \\t\\n\\s\\r] / crlf ;
 crlf                        <- [\\r]? [\\n] ;
-sep                         <- (space+)? ',' (space+)? ;
+%sep                         <- (space+)? traversal_operator (space+)? ;
+intersect_operator          <- (space+)? '=>' (space+)? ;
+union_operator              <- (space+)? ',' (space+)? ;
+subquery_operator           <- (space+)? '<-' (space+)? ;
+negated_traversal_operator  <- '!' ;
+recursion_operator          <- '*' ;

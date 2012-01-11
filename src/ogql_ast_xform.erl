@@ -25,16 +25,39 @@
 -type ast_node() :: list(term()) | tuple(atom(), ast_node()).
 
 -spec transform(atom(), ast_node(), any()) -> ast_node().
-transform(Grouping, [_,[[_,Query]],_], _) 
-        when Grouping == fixed_order_group orelse
-             Grouping == traversal_order_group ->
-    {Grouping, Query};
+transform(group, [_,[[_,Query]],_], _) ->
+    Query;
+transform(group, [_,[[_,[Query]]],_], _) ->
+    Query;
 transform('query', Node, _) ->
     case Node of
       [] -> [];
       [""] -> [];
-      _ -> drop_sep(Node)
+      [[AST],[]] ->
+            AST;
+      [[Set], {subquery, _}=SubQuery] ->
+            {Set, SubQuery};
+        _ ->
+            Node
     end;
+transform(intersection, [A, _, B], _) ->
+    Lv = case A of [L] -> L; _ -> A end,
+    Rv = case B of [R] -> R; _ -> B end,
+    {intersect, {Lv, Rv}};
+transform(union, [A,_,B], _) ->
+    {union, {A, B}};
+transform(subquery, [_, Node], _) ->
+    {subquery, Node};
+transform(set, [[]|[Node]], _) ->
+    Node;
+transform(set, [{negated_traversal_operator,_}|[Data]], _) ->
+    {negated_traversal, Data};
+transform(set, [{negated_traversal_operator,_}|Data], _) ->
+    {negated_traversal, Data};
+transform(set, [{recursion_operator,_}|[Data]], _) ->
+    {recursive, Data};
+transform(set, [{recursion_operator,_}|Data], _) ->
+    {recursive, Data};
 transform(expression_list, Node, _) ->
     case Node of
         [] -> [];
@@ -100,14 +123,24 @@ transform(constant, [_,Data], _) ->
     {constant, list_to_atom(bin_parts_to_string(Data))};
 transform(boolean, Node, _) ->
     {boolean, list_to_atom(string:to_lower(bin_parts_to_string(Node)))};
+transform(normative_step, [[Step], []], _) ->
+    Step;
+transform(normative_step, [Step, []], _) ->
+    Step;
+transform(normative_step, [[Step, SubQuery]], _) ->
+    {Step, SubQuery};
+transform(sep, [_,{Mode, _},_], _) ->
+    Mode;
 transform(NonTerminal, Node, _) ->
     case is_identifier(NonTerminal) of
         true ->
             Node;
         false ->
             Node2 = case Node of
-                [[_,[H|_]=Word]] when is_list(Word) andalso is_binary(H) -> 
+                [[_,[H|_]=Word]] when is_list(Word) andalso is_binary(H) ->
                     bin_parts_to_string(Word);
+                [[Node,[]]] ->
+                    Node;
                 Bin when is_binary(Bin) ->
                     erlang:binary_to_list(Bin);
                 _ ->
@@ -117,9 +150,10 @@ transform(NonTerminal, Node, _) ->
     end.
 
 is_identifier(NonTerminal) ->
-    lists:member(NonTerminal, 
-        [word, space, crlf, sep, normative_axis, literal_number, 
-            data_point_or_literal, step, grouping, normative_step]).
+    lists:member(NonTerminal,
+        [word, space, crlf, normative_axis, literal_number,
+            data_point_or_literal, step, group, sep, set, group,
+                subquery, traversal_operator, normative_step]).
 
 predicate(Type, Node) ->
     case Node of
@@ -130,11 +164,13 @@ predicate(Type, Node) ->
         [[[_, Word]],[]] ->
             {Type, bin_parts_to_string(Word)};
         [[Word], {bracketed_expression, [_, [[_, ExpressionList]], _]}] ->
-            {{Type, bin_parts_to_string(Word)}, 
+            {{Type, bin_parts_to_string(Word)},
                 {filter_expression, reduce(ExpressionList)}};
         [[[_, Word]],  {bracketed_expression, [_, [[_, ExpressionList]], _]}] ->
-                {{Type, bin_parts_to_string(Word)}, 
+                {{Type, bin_parts_to_string(Word)},
                  {filter_expression, reduce(ExpressionList)}};
+        [AST] ->
+            {Type, AST};
         _ ->
             {Type, Node}
     end.
@@ -155,7 +191,7 @@ bin_parts_to_string(Parts) when is_binary(Parts) ->
 bin_parts_to_string(Parts) ->
     lists:concat([ erlang:binary_to_list(B) || B <- lists:flatten(Parts) ]).
 
-drop_sep(Node) ->
-    H = proplists:get_value(head, Node),
-    T = [R || [_,R] <- proplists:get_value(tail, Node)],
-    [H|T].
+%drop_sep(Node) ->
+%    H = proplists:get_value(head, Node),
+%    T = [R || [_,R] <- proplists:get_value(tail, Node)],
+%    [H|T].
