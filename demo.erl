@@ -13,7 +13,7 @@ main(_) ->
     run_query("a => (b => (c => d))"),
     run_query("(a-b => b-c)"),
     run_query("((a-b => (b-c, b-d)) => (c-e, d-e) => e-f)"),
-    run_query("((a-b <- (b-c, c-d)) => (b-k, b-n) => n-z)"),
+    run_query("((a-b <- (b-c, b-d)) => (b-k, b-n) => n-z)"),
     run_query("flow-step => (step-ifc <- (ifc-operations), step-appcomp) => ifc-service"),
     run_query("((design-flow <- (flow-step => step-ifc => ifc-op)) => !service-flow)"),
     run_query("flow-step => ((step-ifc <- ifc-operations), step-appcomp) => ifc-service"),

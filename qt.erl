@@ -3,6 +3,8 @@
 -module(qt).
 -compile(export_all).
 
+main([Expr]) when is_list(Expr) ->
+    run_query(Expr);
 main(_) ->
     run_query("a-b => b-c => c-d"),
     run_query("platformSystem"),

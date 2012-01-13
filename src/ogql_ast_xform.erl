@@ -86,8 +86,6 @@ transform(member_name, [<<"$(">>, Data, <<")">>], _) ->
     end;
 transform(data_point, [[], Member], _) ->
     Member;
-transform(recursive_step, [_,Node], _) ->
-    {recursive, Node};
 transform(root_branch_filter, [_,[[_,{root_identifier, Node}]],_], _) ->
     case Node of
         [{primary_asset_id, [AssetId]}, [<<"-">>, Version]] ->
@@ -99,10 +97,14 @@ transform(semver, Node, _) ->
     semver:parse(bin_parts_to_string(Node));
 transform(asset_name, Node, _) ->
     {asset_name, bin_parts_to_string(Node)};
+transform(operator, Op, _) ->
+    {operator, list_to_atom(binary_to_list(Op))};
 transform(data_point, [Axis, _, Member], _) ->
     case Axis of
         [] ->
             {default_axis, Member};
+        {axis, Name} when is_list(Name) ->
+            {{axis, list_to_atom(Name)}, Member};
         _ ->
             {Axis, Member}
     end;
@@ -123,14 +125,6 @@ transform(constant, [_,Data], _) ->
     {constant, list_to_atom(bin_parts_to_string(Data))};
 transform(boolean, Node, _) ->
     {boolean, list_to_atom(string:to_lower(bin_parts_to_string(Node)))};
-transform(normative_step, [[Step], []], _) ->
-    Step;
-transform(normative_step, [Step, []], _) ->
-    Step;
-transform(normative_step, [[Step, SubQuery]], _) ->
-    {Step, SubQuery};
-transform(sep, [_,{Mode, _},_], _) ->
-    Mode;
 transform(NonTerminal, Node, _) ->
     case is_identifier(NonTerminal) of
         true ->
@@ -151,9 +145,8 @@ transform(NonTerminal, Node, _) ->
 
 is_identifier(NonTerminal) ->
     lists:member(NonTerminal,
-        [word, space, crlf, normative_axis, literal_number,
-            data_point_or_literal, step, group, sep, set, group,
-                subquery, traversal_operator, normative_step]).
+        [word, space, crlf, literal_number, normative_axis,
+            data_point_or_literal, set, group, subquery]).
 
 predicate(Type, Node) ->
     case Node of
@@ -176,15 +169,15 @@ predicate(Type, Node) ->
     end.
 
 reduce(ExprList) ->
-    lists:flatten(lists:foldl(fun combine_expressions/2, [], ExprList)).
+    lists:foldl(fun combine_expressions/2, [], ExprList).
 
-combine_expressions({expression, Expr}, Acc) ->
-    Acc ++ strip(Expr);
+combine_expressions({expression, Expr}, []) ->
+    strip(Expr);
 combine_expressions({{junction, {Type, _}}, {expression, Expr}}, Acc) ->
-    [{Type, [Acc, strip(Expr)]}].
+    {Type, {Acc, strip(Expr)}}.
 
 strip(Expr) ->
-    [ X || X <- Expr, X /= <<" ">> andalso X /= [] ].
+    list_to_tuple([ X || X <- Expr, X /= <<" ">> andalso X /= [] ]).
 
 bin_parts_to_string(Parts) when is_binary(Parts) ->
     erlang:binary_to_list(Parts);

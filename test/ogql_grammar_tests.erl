@@ -24,56 +24,41 @@
 -include_lib("hamcrest/include/hamcrest.hrl").
 -include_lib("semver/include/semver.hrl").
 
+-compile(export_all).
+
+-import(ogql, [parse/1, filter/2, provider/1, intersect/2, default/1,
+               type/1, predicate/1, eq/2, starts_with/2, value/1]).
+
 basic_parsing_test() ->
-    ?assertThat(parsed("platformSystem"),
-                is(equal_to([{implicit_name_predicate, "platformSystem"}]))).
+    ?assertThat(typeof("platformSystem"), is(implicit_name_predicate)).
 
-multiple_path_steps_test() ->
-    ?assertThat(parsed("platformSystem,systemConsumingPlatform"),
-                is(equal_to(
-                    [{implicit_name_predicate, "platformSystem"},
-                     {implicit_name_predicate, "systemConsumingPlatform"}]))).
-
-root_branch_filter_test() ->
-    ?assertThat(parsed("$root(SystemRequirements),require-doc,
-                            $root(OperationalSpecifications-1.0.2),doc-owner"),
-                is(equal_to([{root_branch_filter,
-                              [{asset_name, "SystemRequirements"}]},
-                             {implicit_name_predicate, "require-doc"},
-                             {root_branch_filter,
-                                [{asset_name, "OperationalSpecifications"},
-                                 {version, #semver{major=1, minor=0, build=2}}]},
-                             {implicit_name_predicate, "doc-owner"}]))).
-
-%implicit_name_and_type_filter_equivalence_test() ->
-%    ?assertThat(parsed("Person"),
-%                is(equal_to(parsed("?[provider::$type = 'Person']"))).
+multiple_path_steps_test_() ->
+    [?_assertThat(parts("platformSystem, systemConsumingPlatform"),
+        is(equal_to([{implicit_name_predicate, "platformSystem"},
+                     {implicit_name_predicate, "systemConsumingPlatform"}]))),
+    ?_assertThat(parse("platformSystem => systemConsumingPlatform"),
+        is(equal_to(intersect("platformSystem", "systemConsumingPlatform"))))].
 
 filter_test_() ->
     [{"filtering an implicit name predicate",
-      ?_assertThat(parsed("service-interface[provider::name = 'BPP']"),
-                   is(equal_to([{{implicit_name_predicate, "service-interface"},
-                                {filter_expression, [
-                                    {{axis,"provider"},{member_name,"name"}},
-                                    {operator,"="},
-                                    {literal,"BPP"}]}}])))},
+      ?_assertThat(parse("service-interface[provider::name eq 'BPP']"),
+                   is(equal_to(filter(predicate("service-interface"),
+                                eq(provider("name"), "BPP")))))},
      {"filtering by member names containing unusual characters",
-      ?_assertThat(parsed("Person[::post-code starts_with 'SE9']"),
-                  is(equal_to([{{type_name_predicate,"Person"},
-                                 {filter_expression,
-                                  [{default_axis,
-                                    {member_name,"post-code"}},
-                                   {operator,"starts_with"},
-                                   {literal,"SE9"}]}}])))},
-     {"filtering with pseudo-function as operator",
-      ?_assertThat(parsed("service-interface[consumer::processId starts_with '1349']"),
+      ?_assertThat(parse("Person[::post-code starts_with 'SE9']"),
+                  is(equal_to(filter(predicate("Person"),
+                                starts_with(default("post-code"), "SE9")))))}].
+
+filter_test_x() ->
+    [{"filtering with pseudo-function as operator",
+      ?_assertThat(parse("service-interface[consumer::processId starts_with '1349']"),
                   is(equal_to([{{implicit_name_predicate, "service-interface"},
                                {filter_expression, [
                                     {{axis,"consumer"},{member_name,"processId"}},
                                     {operator,"starts_with"},
                                     {literal,"1349"}]}}])))},
      {"filtering with a wilcarded type name predicate",
-      ?_assertThat(parsed("Person,?[provider::name = 'Joe']"),
+      ?_assertThat(parse("Person,?[provider::name = 'Joe']"),
                   is(equal_to([{type_name_predicate,"Person"},
                                {{type_name_predicate,"?"},
                                {filter_expression,
@@ -81,7 +66,7 @@ filter_test_() ->
                                     {operator,"="},
                                     {literal,"Joe"}]}}])))},
     {"filtering with a wilcarded type name predicate",
-     ?_assertThat(parsed("Person,?[provider::name = 'Joe']"),
+     ?_assertThat(parse("Person,?[provider::name = 'Joe']"),
                  is(equal_to([{type_name_predicate,"Person"},
                               {{type_name_predicate,"?"},
                               {filter_expression,
@@ -89,7 +74,7 @@ filter_test_() ->
                                    {operator,"="},
                                    {literal,"Joe"}]}}])))},
     {"filtering with white space between steps",
-     ?_assertThat(parsed("Department[::region = 'Greater London'],
+     ?_assertThat(parse("Department[::region = 'Greater London'],
                             Employee[::firstName like 'John%']"),
                  is(equal_to([{{type_name_predicate, "Department"},
                                 {filter_expression,
@@ -102,9 +87,9 @@ filter_test_() ->
                                   {operator,"like"},
                                   {literal, "John%"}]}}])))}].
 
-accessing_edge_nodes_test_() ->
+accessing_edge_nodes_test__x() ->
     [{"access to 'special' object fields",
-     ?_assertThat(parsed("?[::$(name) = 'Caller' AND 
+     ?_assertThat(parse("?[::$(name) = 'Caller' AND 
                             ::$(description) contains 'APMO']"),
                  is(equal_to([{{type_name_predicate, "?"},
                                 {filter_expression,
@@ -119,7 +104,7 @@ accessing_edge_nodes_test_() ->
                                         {operator, "contains"},
                                         {literal, "APMO"}]]}]}}])))},
     {"access to object fields via fully qualified names",
-     ?_assertThat(parsed("?[::$(version.major) > 10 AND 
+     ?_assertThat(parse("?[::$(version.major) > 10 AND 
                             ::$(lastmodified.user) = 991726352]"),
                  is(equal_to([{{type_name_predicate, "?"},
                               {filter_expression,
@@ -133,7 +118,7 @@ accessing_edge_nodes_test_() ->
                                    {operator,"="},
                                    {literal, 991726352}]]}]}}])))},
     {"access to fully qualified version numbers",
-    ?_assertThat(parsed("?[::$(version.major) = 2 AND 
+    ?_assertThat(parse("?[::$(version.major) = 2 AND 
                            ::$(version.minor) = 0 AND 
                            ::$(version.build) = 1]"),
                 is(equal_to([{{type_name_predicate,"?"},
@@ -155,8 +140,8 @@ accessing_edge_nodes_test_() ->
                                   {literal, 1}]]}]}}])))}].
 
 %% TODO: test version number handling....
-version_handling_test() ->
-     ?assertThat(parsed("?[::$(version) > VSN(1.6.13-RC2)]"),
+version_handling_test_x() ->
+     ?assertThat(parse("?[::$(version) > VSN(1.6.13-RC2)]"),
                  is(equal_to([{{type_name_predicate,"?"},
                                  {filter_expression,
                                   [{default_axis,
@@ -168,14 +153,14 @@ version_handling_test() ->
                                             build=13,
                                             patch="RC2"}}]}}]))).
 
-recursive_join_operator_test_() ->
+recursive_join_operator_test_x() ->
     [{"when applied to implicit name predicates",
-     ?_assertThat(parsed("ancestry-person,*person-person"),
+     ?_assertThat(parse("ancestry-person,*person-person"),
             is(equal_to([{implicit_name_predicate,"ancestry-person"},
                             {recursive,
                             {implicit_name_predicate, "person-person"}}])))},
      {"when applied to fixed order groups",
-     ?_assertThat(parsed("platform-system,
+     ?_assertThat(parse("platform-system,
             *((system-system,system-interface),
                 interface-system)"),
             is(equal_to([{implicit_name_predicate,"platform-system"},
@@ -186,16 +171,16 @@ recursive_join_operator_test_() ->
                                {implicit_name_predicate, "system-interface"}]},
                              {implicit_name_predicate, "interface-system"}]}}])))},
      {"when applied to traversal order groups",
-     ?_assertThat(parsed("$root(John),*{personRoles,roleRelationship}"),
+     ?_assertThat(parse("$root(John),*{personRoles,roleRelationship}"),
             is(equal_to([{root_branch_filter, [{asset_name,"John"}]},
                         {recursive,
                          {traversal_order_group,
                           [{implicit_name_predicate, "personRoles"},
                            {implicit_name_predicate, "roleRelationship"}]}}])))}].
                   
-literal_handling_test_() ->
+literal_handling_test_x() ->
     [{"separate handling of strings and integers",
-     ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 18]"),
+     ?_assertThat(parse("Person[::name like 'Joe' AND ::age > 18]"),
                   is(equal_to([{{type_name_predicate,"Person"},
                                 {filter_expression,
                                  [{conjunction,
@@ -206,7 +191,7 @@ literal_handling_test_() ->
                                      {operator,">"},
                                      {literal, 18}]]}]}}])))},
      {"separate handling of strings and floats",
-      ?_assertThat(parsed("Person[::name like 'Joe' AND ::age > 21.65]"),
+      ?_assertThat(parse("Person[::name like 'Joe' AND ::age > 21.65]"),
                    is(equal_to([{{type_name_predicate,"Person"},
                                  {filter_expression,
                                   [{conjunction,
@@ -217,10 +202,10 @@ literal_handling_test_() ->
                                       {operator,">"},
                                       {literal, 21.65}]]}]}}])))},
      {"date handling is done via a pseudo-function",
-     ?_assertThat(parsed("Person[::date-of-birth > DATE(21-3-1972)]"),
+     ?_assertThat(parse("Person[::date-of-birth > DATE(21-3-1972)]"),
           contains_date_literal({1972,3,21}))},
      {"boolean handling via a built-in constants",
-     ?_assertThat(parsed("Service[::is-daemon = TRUE OR ::active = FALSE]"),
+     ?_assertThat(parse("Service[::is-daemon = TRUE OR ::active = FALSE]"),
           is(equal_to([{{type_name_predicate, "Service"},
                            {filter_expression,
                             [{disjunction,
@@ -231,16 +216,16 @@ literal_handling_test_() ->
                                 {operator,"="},
                                 {literal, {boolean, false}}]]}]}}])))},
      {"user defined constants",
-     ?_assertThat(parsed("Service[::classification = :strategic]"),
+     ?_assertThat(parse("Service[::classification = :strategic]"),
            is(equal_to([{{type_name_predicate,"Service"},
                             {filter_expression,
                              [{default_axis, {member_name, "classification"}},
                               {operator,"="},
                               {literal, {constant, strategic}}]}}])))}].
 
-logical_operator_test_() ->
+logical_operator_test_x() ->
     [{"single logical conjunction",
-     ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND ::name like 'Joe']"),
+     ?_assertThat(parse("Person[::post-code starts_with 'SE9' AND ::name like 'Joe']"),
                   is(equal_to([{{type_name_predicate, "Person"},
                                {filter_expression, [
                                 {conjunction,
@@ -251,7 +236,7 @@ logical_operator_test_() ->
                                     {operator, "like"},
                                     {literal, "Joe"}]]}]}}])))},
      {"multiple logical conjunctions",
-     ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND "
+     ?_assertThat(parse("Person[::post-code starts_with 'SE9' AND "
                                 "::name like 'Joe' AND "
                                 "::contact_details contains 'Besborough']"),
                   is(equal_to([{{type_name_predicate, "Person"},
@@ -268,7 +253,7 @@ logical_operator_test_() ->
                                       {operator, "contains"},
                                       {literal, "Besborough"}]]}]}}])))},
       {"mixed disjunctions and conjunctions",
-      ?_assertThat(parsed("Person[::post-code starts_with 'SE9' AND "
+      ?_assertThat(parse("Person[::post-code starts_with 'SE9' AND "
                                  "::name like 'Joe' OR "
                                  "consumer::contact_details contains 'Besborough']"),
                    is(equal_to([{{type_name_predicate, "Person"},
@@ -286,21 +271,21 @@ logical_operator_test_() ->
                                   {operator, "contains"},
                                   {literal, "Besborough"}]]}]}}])))}].
 
-grouping_test_() ->
+grouping_test_x() ->
     [{"fixed order grouping",
-     ?_assertThat(parsed("a-b,(b-c, b-d)"),
+     ?_assertThat(parse("a-b,(b-c, b-d)"),
         is(equal_to([{implicit_name_predicate,"a-b"},
                         {fixed_order_group,[
                             {implicit_name_predicate,"b-c"},
                             {implicit_name_predicate,"b-d"}]}])))},
      {"traversal order grouping",
-     ?_assertThat(parsed("a-b,{b-c, c-d}"),
+     ?_assertThat(parse("a-b,{b-c, c-d}"),
         is(equal_to([{implicit_name_predicate,"a-b"},
                         {traversal_order_group,[
                             {implicit_name_predicate,"b-c"},
                             {implicit_name_predicate,"c-d"}]}])))},
      {"nested grouping with filter predicates",
-     ?_assertThat(parsed("server-interface,
+     ?_assertThat(parse("server-interface,
                             {interface-client[::group = :b2b],
                                 client-sla,(sla-groups[::$(key) = :b2b],sla-documents)}"),
         is(equal_to([{implicit_name_predicate, "server-interface"},
@@ -326,8 +311,12 @@ grouping_test_() ->
 %% Utility functions and custom Hamcrest matchers
 %%
 
-parsed(Q) ->
-    ogql_grammar:parse(Q).
+parts(Q) ->
+    [ {type(P), value(P)} || 
+                    P <- tuple_to_list(ogql:parts(parse(Q))) ].
+
+typeof(Q) ->
+    type(parse(Q)).
 
 contains_date_literal(Date) ->
     fun (AST) -> 
