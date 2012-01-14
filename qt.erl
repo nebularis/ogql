@@ -3,6 +3,9 @@
 -module(qt).
 -compile(export_all).
 
+main(["demo"]) ->
+    run_query("?[::$(version.major) gt 10 AND
+                 ::$(lastmodified.user) eq 991726352]");
 main([Expr]) when is_list(Expr) ->
     run_query(Expr);
 main(_) ->

@@ -26,8 +26,10 @@
 
 -compile(export_all).
 
--import(ogql, [parse/1, filter/2, provider/1, intersect/2, default/1,
-               type/1, predicate/1, eq/2, starts_with/2, value/1]).
+-import(ogql, [parse/1, filter/2, consumer/1, provider/1,
+               intersect/2, default/1, type/1, predicate/1, like/2, eq/2,
+               gt/2, internal/1, semver/1, starts_with/2, value/1,
+               contains/2, conjunction/2, recursive/1, union/2]).
 
 basic_parsing_test() ->
     ?assertThat(typeof("platformSystem"), is(implicit_name_predicate)).
@@ -47,137 +49,91 @@ filter_test_() ->
      {"filtering by member names containing unusual characters",
       ?_assertThat(parse("Person[::post-code starts_with 'SE9']"),
                   is(equal_to(filter(predicate("Person"),
-                                starts_with(default("post-code"), "SE9")))))}].
-
-filter_test_x() ->
-    [{"filtering with pseudo-function as operator",
+                                starts_with(default("post-code"), "SE9")))))},
+     {"filtering with pseudo-function as operator",
       ?_assertThat(parse("service-interface[consumer::processId starts_with '1349']"),
-                  is(equal_to([{{implicit_name_predicate, "service-interface"},
-                               {filter_expression, [
-                                    {{axis,"consumer"},{member_name,"processId"}},
-                                    {operator,"starts_with"},
-                                    {literal,"1349"}]}}])))},
+                  is(equal_to(filter(predicate("service-interface"),
+                               starts_with(consumer("processId"), "1349")))))},
      {"filtering with a wilcarded type name predicate",
-      ?_assertThat(parse("Person,?[provider::name = 'Joe']"),
-                  is(equal_to([{type_name_predicate,"Person"},
-                               {{type_name_predicate,"?"},
-                               {filter_expression,
-                                   [{{axis,"provider"},{member_name,"name"}},
-                                    {operator,"="},
-                                    {literal,"Joe"}]}}])))},
-    {"filtering with a wilcarded type name predicate",
-     ?_assertThat(parse("Person,?[provider::name = 'Joe']"),
-                 is(equal_to([{type_name_predicate,"Person"},
-                              {{type_name_predicate,"?"},
-                              {filter_expression,
-                                  [{{axis,"provider"},{member_name,"name"}},
-                                   {operator,"="},
-                                   {literal,"Joe"}]}}])))},
-    {"filtering with white space between steps",
-     ?_assertThat(parse("Department[::region = 'Greater London'],
+      ?_assertThat(parse("Person => ?[provider::name eq 'Joe']"),
+            is(equal_to(
+                    intersect(predicate("Person"),
+                              filter(predicate("?"),
+                                    eq(provider("name"), "Joe"))))))},
+     {"filtering with white space between steps",
+      ?_assertThat(parse("Department[::region eq 'Greater London'] =>
                             Employee[::firstName like 'John%']"),
-                 is(equal_to([{{type_name_predicate, "Department"},
-                                {filter_expression,
-                                 [{default_axis, {member_name, "region"}},
-                                  {operator,"="},
-                                  {literal, "Greater London"}]}},
-                               {{type_name_predicate, "Employee"},
-                                {filter_expression,
-                                 [{default_axis, {member_name, "firstName"}},
-                                  {operator,"like"},
-                                  {literal, "John%"}]}}])))}].
+            is(equal_to(
+                    intersect(filter(predicate("Department"),
+                                eq(default("region"), "Greater London")),
+                              filter(predicate("Employee"),
+                                like(default("firstName"), "John%"))))))}].
 
-accessing_edge_nodes_test__x() ->
+accessing_edge_nodes_test_() ->
     [{"access to 'special' object fields",
-     ?_assertThat(parse("?[::$(name) = 'Caller' AND 
+     ?_assertThat(parse("?[::$(name) eq 'Caller' AND
                             ::$(description) contains 'APMO']"),
-                 is(equal_to([{{type_name_predicate, "?"},
-                                {filter_expression,
-                                  [{conjunction,
-                                    [ [
-                                     {default_axis, 
-                                        {member_name, {internal, "name"}}},
-                                        {operator, "="},
-                                        {literal, "Caller"}],
-                                     [{default_axis,
-                                        {member_name, {internal, "description"}}},
-                                        {operator, "contains"},
-                                        {literal, "APMO"}]]}]}}])))},
-    {"access to object fields via fully qualified names",
-     ?_assertThat(parse("?[::$(version.major) > 10 AND 
-                            ::$(lastmodified.user) = 991726352]"),
-                 is(equal_to([{{type_name_predicate, "?"},
-                              {filter_expression,
-                               [{conjunction,
-                                 [[{default_axis,
-                                    {member_name, {internal, {"version", "major"}}}},
-                                   {operator,">"},
-                                   {literal, 10}],
-                                  [{default_axis,
-                                    {member_name, {internal, {"lastmodified", "user"}}}},
-                                   {operator,"="},
-                                   {literal, 991726352}]]}]}}])))},
-    {"access to fully qualified version numbers",
-    ?_assertThat(parse("?[::$(version.major) = 2 AND 
-                           ::$(version.minor) = 0 AND 
-                           ::$(version.build) = 1]"),
-                is(equal_to([{{type_name_predicate,"?"},
-                             {filter_expression,
-                              [{conjunction,
-                                [[{conjunction,
-                                   [[{default_axis, {member_name,
-                                       {internal, {"version", "major"}}}},
-                                     {operator,"="},
-                                     {literal, 2}],
-                                    [{default_axis,
-                                      {member_name, {internal,
-                                        {"version", "minor"}}}},
-                                     {operator,"="},
-                                     {literal, 0}]]}],
-                                 [{default_axis, {member_name, 
-                                   {internal, {"version","build"}}}},
-                                  {operator,"="},
-                                  {literal, 1}]]}]}}])))}].
+         is(equal_to(
+            filter(predicate("?"),
+                conjunction(
+                    eq(default(internal("name")), "Caller"),
+                    contains(default(internal("description")), "APMO"))))))},
+     {"access to object fields via fully qualified names",
+     ?_assertThat(parse("?[::$(version.major) gt 10 AND
+                           ::$(lastmodified.user) eq 991726352]"),
+         is(equal_to(
+            filter(predicate("?"),
+                conjunction(
+                    gt(default(internal({"version", "major"})), 10),
+                    eq(default(
+                        internal({"lastmodified", "user"})), 991726352))))))},
+     {"access to fully qualified version numbers",
+     ?_assertThat(parse("?[::$(version.major) eq 2 AND
+                           ::$(version.minor) eq 0 AND
+                           ::$(version.build) eq 1]"),
+         is(equal_to(
+            filter(predicate("?"),
+                conjunction(
+                    conjunction(
+                        eq(default(internal({"version", "major"})), 2),
+                        eq(default(internal({"version", "minor"})), 0)),
+                    eq(default(internal({"version","build"})), 1))))))}].
 
-%% TODO: test version number handling....
-version_handling_test_x() ->
-     ?assertThat(parse("?[::$(version) > VSN(1.6.13-RC2)]"),
-                 is(equal_to([{{type_name_predicate,"?"},
-                                 {filter_expression,
-                                  [{default_axis,
-                                    {member_name,{internal,"version"}}},
-                                   {operator,">"},
-                                   {literal,
-                                    #semver{major=1,
-                                            minor=6,
-                                            build=13,
-                                            patch="RC2"}}]}}]))).
+version_handling_test() ->
+     ?assertThat(parse("?[::$(version) gt VSN(1.6.13-RC2)]"),
+            is(equal_to(filter(predicate("?"),
+                        gt(default(internal("version")),
+                            semver("1.6.13-RC2")))))).
 
-recursive_join_operator_test_x() ->
+recursive_join_operator_test_() ->
     [{"when applied to implicit name predicates",
      ?_assertThat(parse("ancestry-person,*person-person"),
-            is(equal_to([{implicit_name_predicate,"ancestry-person"},
-                            {recursive,
-                            {implicit_name_predicate, "person-person"}}])))},
-     {"when applied to fixed order groups",
-     ?_assertThat(parse("platform-system,
-            *((system-system,system-interface),
-                interface-system)"),
-            is(equal_to([{implicit_name_predicate,"platform-system"},
-                          {recursive,
-                           {fixed_order_group,
-                            [{fixed_order_group,
-                              [{implicit_name_predicate, "system-system"},
-                               {implicit_name_predicate, "system-interface"}]},
-                             {implicit_name_predicate, "interface-system"}]}}])))},
+            is(equal_to(union(predicate("ancestry-person"),
+                              recursive(predicate("person-person"))))))},
+     {"when applied to join groups",
+       ?_assertThat(parse("platform-system =>
+              *((system-system, system-interface) =>
+                  interface-system)"),
+            is(equal_to(
+                intersect(predicate("platform-system"),
+                          recursive(
+                            intersect(
+                                union(predicate("system-system"),
+                                      predicate("system-interface")),
+                                predicate("interface-system")))))))},
      {"when applied to traversal order groups",
-     ?_assertThat(parse("$root(John),*{personRoles,roleRelationship}"),
-            is(equal_to([{root_branch_filter, [{asset_name,"John"}]},
-                        {recursive,
-                         {traversal_order_group,
-                          [{implicit_name_predicate, "personRoles"},
-                           {implicit_name_predicate, "roleRelationship"}]}}])))}].
-                  
+       ?_assertThat(parse("*(personRoles => roleRelationship)"),
+            is(equal_to(recursive(intersect(predicate("personRoles"),
+                                            predicate("roleRelationship"))))))}].
+
+literal_handling_test_() ->
+    [{"separate handling of strings and integers",
+     ?_assertThat(parse("Person[::name like 'Joe' AND ::age gt 18]"),
+        is(equal_to(
+            filter(predicate("Person"),
+                   conjunction(like(default("name"), "Joe"),
+                               gt(default("age"), 18))))))}].
+
 literal_handling_test_x() ->
     [{"separate handling of strings and integers",
      ?_assertThat(parse("Person[::name like 'Joe' AND ::age > 18]"),
@@ -312,14 +268,14 @@ grouping_test_x() ->
 %%
 
 parts(Q) ->
-    [ {type(P), value(P)} || 
+    [ {type(P), value(P)} ||
                     P <- tuple_to_list(ogql:parts(parse(Q))) ].
 
 typeof(Q) ->
     type(parse(Q)).
 
 contains_date_literal(Date) ->
-    fun (AST) -> 
+    fun (AST) ->
         case (AST) of
             [{{type_name_predicate,"Person"},
                {filter_expression,

@@ -162,6 +162,10 @@ predicate(Type, Node) ->
         [[[_, Word]],  {bracketed_expression, [_, [[_, ExpressionList]], _]}] ->
                 {{Type, bin_parts_to_string(Word)},
                  {filter_expression, reduce(ExpressionList)}};
+        [[<<"?">>],[]] ->   
+            %% NB: this clause occurs when we parse "?" by 
+            %% itself from ogql:predicate/1
+            {Type, "?"};
         [AST] ->
             {Type, AST};
         _ ->

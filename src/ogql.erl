@@ -26,6 +26,17 @@
 parse(Q) ->
     ogql_grammar:parse(Q).
 
+semver(#semver{}=Vsn) ->
+    Vsn;
+semver(Vsn) when is_list(Vsn) ->
+    semver:parse(Vsn).
+
+recursive(Thing) ->
+    {recursive, Thing}.
+
+internal(Tag) when is_list(Tag) orelse is_tuple(Tag) ->
+    {internal, Tag}.
+
 default(Name) ->
     axis(default, Name).
 
@@ -38,8 +49,17 @@ consumer(Name) ->
 starts_with(Axis, Value) ->
     binop(starts_with, Axis, Value).
 
+contains(Axis, Value) ->
+    binop(contains, Axis, Value).
+
+like(Axis, Value) ->
+    binop(like, Axis, Value).
+
 eq(Axis, Value) ->
     binop(eq, Axis, Value).
+
+gt(Axis, Value) ->
+    binop(gt, Axis, Value).
 
 binop(Op, Axis, {{_,_,_}, _}=Literal) ->
     binop(Op, Axis, {literal, Literal});
@@ -51,7 +71,9 @@ binop(Op, Axis, Literal) when is_integer(Literal) orelse
 binop(Op, Axis, {literal, _}=Literal) ->
     {Axis, {operator, Op}, Literal}.
 
-axis(Axis, Name) ->
+axis(Axis, {internal, _}=Name) ->
+    {axis(Axis), {member_name, Name}};
+axis(Axis, [H|_]=Name) when is_integer(H) ->
     {axis(Axis), {member_name, Name}}.
 
 axis(default) ->
@@ -72,8 +94,22 @@ predicate(Id) ->
 filter(What, Filter) ->
     {What, {filter_expression, maybe_parse_filter_expression(Filter)}}.
 
-intersect(A, B) ->
-    {intersect, {parse(A), parse(B)}}.
+conjunction(A, B) when is_tuple(A) andalso is_tuple(B) ->
+    {conjunction, {A, B}}.
+
+union(A, B) when is_tuple(A) andalso is_tuple(B) ->
+    {union, {A, B}};
+union([A1|_]=A, [B1|_]=B) when 
+    is_integer(A1) andalso
+    is_integer(B1) ->
+    union(parse(A), parse(B)).
+
+intersect(A, B) when is_tuple(A) andalso is_tuple(B) ->
+    {intersect, {A, B}};
+intersect([A1|_]=A, [B1|_]=B) when 
+    is_integer(A1) andalso
+    is_integer(B1) ->
+    intersect(parse(A), parse(B)).
 
 parts({_, {_, _}=Parts}) ->
     Parts.
