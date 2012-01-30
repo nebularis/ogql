@@ -20,6 +20,7 @@
 %% THE SOFTWARE.
 %% -----------------------------------------------------------------------------
 -module(ogql).
+-include_lib("annotations/include/annotations.hrl").
 -include_lib("semver/include/semver.hrl").
 -compile(export_all).
 
@@ -30,6 +31,37 @@ semver(#semver{}=Vsn) ->
     Vsn;
 semver(Vsn) when is_list(Vsn) ->
     semver:parse(Vsn).
+
+%% cursor operations
+
+left({Left, {operator, _}, _}) ->
+    Left;
+left({Left, _}) ->
+    Left.
+
+right({{_Axis, _}, {operator, _}, Right}) ->
+    Right;
+right({_, Right}) ->
+    Right.
+
+parts({_, {_, _}=Parts}) ->
+    Parts.
+
+type({T, _}) ->
+    T.
+
+value({_, V}) ->
+    V.
+
+has_filter({_, {filter_expression, _}}) ->
+    true;
+has_filter(_) ->
+    false.
+
+%% AST builders
+
+constant(What) ->
+    {constant, What}.
 
 recursive(Thing) ->
     {recursive, Thing}.
@@ -45,31 +77,6 @@ provider(Name) ->
 
 consumer(Name) ->
     axis(consumer, Name).
-
-starts_with(Axis, Value) ->
-    binop(starts_with, Axis, Value).
-
-contains(Axis, Value) ->
-    binop(contains, Axis, Value).
-
-like(Axis, Value) ->
-    binop(like, Axis, Value).
-
-eq(Axis, Value) ->
-    binop(eq, Axis, Value).
-
-gt(Axis, Value) ->
-    binop(gt, Axis, Value).
-
-binop(Op, Axis, {{_,_,_}, _}=Literal) ->
-    binop(Op, Axis, {literal, Literal});
-binop(Op, Axis, Literal) when is_integer(Literal) orelse
-                              is_float(Literal) orelse
-                              is_list(Literal) orelse
-                              is_record(Literal, semver) ->
-    binop(Op, Axis, {literal, Literal});
-binop(Op, Axis, {literal, _}=Literal) ->
-    {Axis, {operator, Op}, Literal}.
 
 axis(Axis, {internal, _}=Name) ->
     {axis(Axis), {member_name, Name}};
@@ -97,31 +104,49 @@ filter(What, Filter) ->
 conjunction(A, B) when is_tuple(A) andalso is_tuple(B) ->
     {conjunction, {A, B}}.
 
+disjunction(A, B) when is_tuple(A) andalso is_tuple(B) ->
+    {disjunction, {A, B}}.
+
 union(A, B) when is_tuple(A) andalso is_tuple(B) ->
     {union, {A, B}};
-union([A1|_]=A, [B1|_]=B) when 
+union([A1|_]=A, [B1|_]=B) when
     is_integer(A1) andalso
     is_integer(B1) ->
     union(parse(A), parse(B)).
 
 intersect(A, B) when is_tuple(A) andalso is_tuple(B) ->
     {intersect, {A, B}};
-intersect([A1|_]=A, [B1|_]=B) when 
+intersect([A1|_]=A, [B1|_]=B) when
     is_integer(A1) andalso
     is_integer(B1) ->
     intersect(parse(A), parse(B)).
 
-parts({_, {_, _}=Parts}) ->
-    Parts.
-
-type({T, _}) ->
-    T.
-
-value({_, V}) ->
-    V.
-
-maybe_parse_filter_expression([H|_]=Filter) when is_integer(H) andalso 
+maybe_parse_filter_expression([H|_]=Filter) when is_integer(H) andalso
                                                  is_list(Filter) ->
     parse(Filter);
 maybe_parse_filter_expression(Filter) ->
     Filter.
+
+-delegate([{args, ['$T', '$I']},
+           {arity, 2},
+           {delegate, [
+                "eq", "gt",
+                "gteq", "lt",
+                "lteq", "like", 
+                "contains", "starts_with",
+                "ends_with", "matches", "path_exists"
+            ]}]).
+binop(Op, Axis, {{_,_,_}, _}=Literal) ->
+    binop(Op, Axis, {literal, Literal});
+binop(Op, Axis, Literal) when Literal =:= true orelse Literal =:= false ->
+    binop(Op, Axis, {literal, {boolean, Literal}});
+binop(Op, Axis, Literal) when is_integer(Literal) orelse
+                              is_float(Literal) orelse
+                              is_list(Literal) orelse
+                              is_record(Literal, semver) ->
+    binop(Op, Axis, {literal, Literal});
+binop(Op, Axis, {constant, _}=Literal) ->
+    binop(Op, Axis, {literal, Literal});
+binop(Op, Axis, {literal, _}=Literal) ->
+    {Axis, {operator, Op}, Literal}.
+

@@ -29,7 +29,8 @@
 -import(ogql, [parse/1, filter/2, consumer/1, provider/1,
                intersect/2, default/1, type/1, predicate/1, like/2, eq/2,
                gt/2, internal/1, semver/1, starts_with/2, value/1,
-               contains/2, conjunction/2, recursive/1, union/2]).
+               contains/2, conjunction/2, disjunction/2,
+               recursive/1, union/2, constant/1]).
 
 basic_parsing_test() ->
     ?assertThat(typeof("platformSystem"), is(implicit_name_predicate)).
@@ -132,52 +133,30 @@ literal_handling_test_() ->
         is(equal_to(
             filter(predicate("Person"),
                    conjunction(like(default("name"), "Joe"),
-                               gt(default("age"), 18))))))}].
+                               gt(default("age"), 18))))))},
+     {"separate handling of strings and floats",
+     ?_assertThat(parse("Person[::name like 'Joe' AND ::age gt 21.65]"),
+        is(equal_to(
+            filter(predicate("Person"),
+                   conjunction(like(default("name"), "Joe"),
+                               gt(default("age"), 21.65))))))},
+     {"date handling is done via a pseudo-function",
+     ?_assertThat(parse("Person[::date-of-birth gt DATE(21-3-1972)]"),
+             contains_date_literal({1972,3,21}))},
+     {"boolean handling via a built-in constants",
+      ?_assertThat(parse("Service[::is-daemon eq TRUE OR ::active eq FALSE]"),
+        is(equal_to(
+             filter(predicate("Service"),
+                    disjunction(eq(default("is-daemon"), true),
+                                eq(default("active"), false))))))},
+     {"user defined constants",
+      ?_assertThat(parse("Service[::classification eq :strategic]"),
+        is(equal_to(
+             filter(predicate("Service"),
+                    eq(default("classification"), constant(strategic))))))}].
 
 literal_handling_test_x() ->
-    [{"separate handling of strings and integers",
-     ?_assertThat(parse("Person[::name like 'Joe' AND ::age > 18]"),
-                  is(equal_to([{{type_name_predicate,"Person"},
-                                {filter_expression,
-                                 [{conjunction,
-                                   [[{default_axis, {member_name,"name"}},
-                                     {operator,"like"},
-                                     {literal,"Joe"}],
-                                    [{default_axis, {member_name,"age"}},
-                                     {operator,">"},
-                                     {literal, 18}]]}]}}])))},
-     {"separate handling of strings and floats",
-      ?_assertThat(parse("Person[::name like 'Joe' AND ::age > 21.65]"),
-                   is(equal_to([{{type_name_predicate,"Person"},
-                                 {filter_expression,
-                                  [{conjunction,
-                                    [[{default_axis, {member_name,"name"}},
-                                      {operator,"like"},
-                                      {literal,"Joe"}],
-                                     [{default_axis, {member_name,"age"}},
-                                      {operator,">"},
-                                      {literal, 21.65}]]}]}}])))},
-     {"date handling is done via a pseudo-function",
-     ?_assertThat(parse("Person[::date-of-birth > DATE(21-3-1972)]"),
-          contains_date_literal({1972,3,21}))},
-     {"boolean handling via a built-in constants",
-     ?_assertThat(parse("Service[::is-daemon = TRUE OR ::active = FALSE]"),
-          is(equal_to([{{type_name_predicate, "Service"},
-                           {filter_expression,
-                            [{disjunction,
-                              [[{default_axis, {member_name, "is-daemon"}},
-                                {operator,"="},
-                                {literal, {boolean,true}}],
-                               [{default_axis, {member_name, "active"}},
-                                {operator,"="},
-                                {literal, {boolean, false}}]]}]}}])))},
-     {"user defined constants",
-     ?_assertThat(parse("Service[::classification = :strategic]"),
-           is(equal_to([{{type_name_predicate,"Service"},
-                            {filter_expression,
-                             [{default_axis, {member_name, "classification"}},
-                              {operator,"="},
-                              {literal, {constant, strategic}}]}}])))}].
+    [].
 
 logical_operator_test_x() ->
     [{"single logical conjunction",
@@ -276,12 +255,15 @@ typeof(Q) ->
 
 contains_date_literal(Date) ->
     fun (AST) ->
+        %% TODO: what does the API look like for extracting a filter expression!??
         case (AST) of
-            [{{type_name_predicate,"Person"},
-               {filter_expression,
-                [{default_axis, {member_name, "date-of-birth"}},
-                 {operator,">"},
-                 {literal, {date, {Date, _}}}]}}] -> true;
-            _ -> false
+            {{type_name_predicate,"Person"},
+                {filter_expression,
+                    {{default_axis,{member_name,"date-of-birth"}},
+                     {operator,gt},
+                     {literal,{date,{Date,_}}}}}} -> true;
+            _Other -> 
+                % io:format("Got Other: ~p~n", [Other]),
+                false
         end
     end.
