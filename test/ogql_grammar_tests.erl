@@ -155,92 +155,43 @@ literal_handling_test_() ->
              filter(predicate("Service"),
                     eq(default("classification"), constant(strategic))))))}].
 
-literal_handling_test_x() ->
-    [].
-
-logical_operator_test_x() ->
+logical_operator_test_() ->
     [{"single logical conjunction",
      ?_assertThat(parse("Person[::post-code starts_with 'SE9' AND ::name like 'Joe']"),
-                  is(equal_to([{{type_name_predicate, "Person"},
-                               {filter_expression, [
-                                {conjunction,
-                                  [[{default_axis, {member_name, "post-code"}},
-                                    {operator, "starts_with"},
-                                    {literal, "SE9"}],
-                                   [{default_axis, {member_name, "name"}},
-                                    {operator, "like"},
-                                    {literal, "Joe"}]]}]}}])))},
+        is(equal_to(
+            filter(predicate("Person"),
+                   conjunction(starts_with(default("post-code"), "SE9"),
+                               like(default("name"), "Joe"))))))},
      {"multiple logical conjunctions",
-     ?_assertThat(parse("Person[::post-code starts_with 'SE9' AND "
-                                "::name like 'Joe' AND "
-                                "::contact_details contains 'Besborough']"),
-                  is(equal_to([{{type_name_predicate, "Person"},
-                                 {filter_expression, [
-                                    {conjunction,
-                                        [[{conjunction,
-                                          [[{default_axis, {member_name, "post-code"}},
-                                            {operator, "starts_with"},
-                                            {literal, "SE9"}],
-                                           [{default_axis, {member_name, "name"}},
-                                            {operator, "like"},
-                                            {literal, "Joe"}]]}],
-                                     [{default_axis, {member_name, "contact_details"}},
-                                      {operator, "contains"},
-                                      {literal, "Besborough"}]]}]}}])))},
-      {"mixed disjunctions and conjunctions",
+      ?_assertThat(parse("Person[::post-code starts_with 'SE9' AND "
+                               "::name like 'Joe' AND "
+                               "::contact_details contains 'Besborough']"),
+        is(equal_to(filter(predicate("Person"),
+            conjunction(conjunction(starts_with(default("post-code"), "SE9"),
+                                    like(default("name"), "Joe")),
+                        contains(default("contact_details"), "Besborough"))))))},
+     {"mixed disjunctions and conjunctions",
       ?_assertThat(parse("Person[::post-code starts_with 'SE9' AND "
                                  "::name like 'Joe' OR "
                                  "consumer::contact_details contains 'Besborough']"),
-                   is(equal_to([{{type_name_predicate, "Person"},
-                             {filter_expression,
-                                [{disjunction,
-                                    [[{conjunction,
-                                      [[{default_axis, {member_name, "post-code"}},
-                                     {operator, "starts_with"},
-                                     {literal, "SE9"}],
-                                     [{default_axis, {member_name, "name"}},
-                                     {operator, "like"},
-                                     {literal, "Joe"}]]}],
-                                    [{{axis, "consumer"},
-                                        {member_name, "contact_details"}},
-                                  {operator, "contains"},
-                                  {literal, "Besborough"}]]}]}}])))}].
+        is(equal_to(filter(predicate("Person"),
+            disjunction(conjunction(starts_with(default("post-code"), "SE9"),
+                                    like(default("name"), "Joe")),
+                        contains(consumer("contact_details"), "Besborough"))))))}].
 
-grouping_test_x() ->
-    [{"fixed order grouping",
-     ?_assertThat(parse("a-b,(b-c, b-d)"),
-        is(equal_to([{implicit_name_predicate,"a-b"},
-                        {fixed_order_group,[
-                            {implicit_name_predicate,"b-c"},
-                            {implicit_name_predicate,"b-d"}]}])))},
-     {"traversal order grouping",
-     ?_assertThat(parse("a-b,{b-c, c-d}"),
-        is(equal_to([{implicit_name_predicate,"a-b"},
-                        {traversal_order_group,[
-                            {implicit_name_predicate,"b-c"},
-                            {implicit_name_predicate,"c-d"}]}])))},
-     {"nested grouping with filter predicates",
-     ?_assertThat(parse("server-interface,
-                            {interface-client[::group = :b2b],
-                                client-sla,(sla-groups[::$(key) = :b2b],sla-documents)}"),
-        is(equal_to([{implicit_name_predicate, "server-interface"},
-                      {traversal_order_group,
-                         [{{implicit_name_predicate, "interface-client"},
-                           {filter_expression,
-                            [{default_axis, {member_name, "group"}},
-                             {operator, "="},
-                             {literal, {constant, b2b}}]}},
-                          {implicit_name_predicate, "client-sla"},
-                          {fixed_order_group,
-                            [{{implicit_name_predicate, "sla-groups"},
-                             {filter_expression,
-                              [{default_axis, {member_name, {internal, "key"}}},
-                               {operator, "="},
-                               {literal, {constant, b2b}}]}},
-                            {implicit_name_predicate, "sla-documents"}]}]}])))}].
-
-%recursive_join_conditions_test_() ->
-%    [{}].
+grouping_test_() ->
+    [{"parenthesis are left associative",
+      ?_assertThat(parse("a => b => c => d"),
+        is(equal_to(parse("a => (b => (c => d))"))))},
+     {"parenthesis create grouping at the innermost scope",
+      ?_assertThat(parse("a-b => (((b-c => c-x), b-d) => (d-n, x-n))"),
+        is(equal_to(
+            intersect(predicate("a-b"),
+                      intersect(union(intersect(predicate("b-c"),
+                                                predicate("c-x")),
+                                      predicate("b-d")),
+                                union(predicate("d-n"),
+                                      predicate("x-n")))))))}].
 
 %%
 %% Utility functions and custom Hamcrest matchers

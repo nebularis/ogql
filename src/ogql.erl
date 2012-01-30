@@ -25,7 +25,12 @@
 -compile(export_all).
 
 parse(Q) ->
-    ogql_grammar:parse(Q).
+    case ogql_grammar:parse(Q) of
+        {_, Bin, {{line,_},{column,_}}=Pos} when is_binary(Bin) ->
+            throw({parse_error, Pos, Bin});
+        AST ->
+            AST
+    end.
 
 semver(#semver{}=Vsn) ->
     Vsn;
