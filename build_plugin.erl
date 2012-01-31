@@ -20,7 +20,7 @@
 %% THE SOFTWARE.
 %% -----------------------------------------------------------------------------
 -module(build_plugin).
--export([pre_compile/2, clean/2, pre_eunit/2]).
+-export([pre_compile/2, clean/2, pre_eunit/2, 'smoke-test'/2]).
 
 pre_compile(_, _) ->
     rebar_log:log(debug, "plugin working in ~s~n", [rebar_utils:get_cwd()]),
@@ -53,4 +53,16 @@ pre_eunit(_, _) ->
             ok;
         false ->
             rebar_log:log(debug, "Not base_dir~n", [])
+    end.
+
+'smoke-test'(_, _) ->
+    case escript:extract("qt.erl", [compile_source]) of
+        {ok, Escript} ->
+            {source, Bin} = lists:keyfind(source, 1, Escript),
+            {module, qt} = code:load_binary(qt, "qt.erl", Bin),
+            put(writer, fun(M, A) -> rebar_log:log(debug, M, A) end),
+            qt:main('smoke-test'),
+            ok;
+        What ->
+            rebar_utils:abort("Unable to run smoke-test: ~p~n", [What])
     end.

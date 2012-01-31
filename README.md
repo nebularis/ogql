@@ -2,7 +2,7 @@
 
 This library implements a parser for the query syntax described in the OGQL
 specification, which can be found
-[here](https://github.com/hyperthunk/eav_spec/wiki/OGQL-0.0.2).
+[here](https://github.com/nebularis/ogql.spec).
 
 ## __Important Note__
 
@@ -18,20 +18,19 @@ The library is distributed under a permissive, BSD-like license.
 
 ## Building from source
 
-You will need [Erlang/OTP](http://erlang.org) and
-[rebar](https://github.com/basho/rebar) installed in order to
-build the project.
+You will need [Erlang/OTP](http://erlang.org) and a custom branch/fork of 
+rebar, which can be found [here](https://github.com/hyperthunk/rebar/tree/econf).
 
-    $ rebar get-deps compile
-    $ rebar skip_deps=true compile
+    $ rebar -C init.config get-deps compile
+    $ rebar -C build.config compile
     $ # run the samples...
-    $ chmod +x qt.erl
-    $ ./qt.erl
+    $ escript qt.erl
 
 ## Running the tests
 
-These require a custom branch/fork of rebar, which can be found
-[here](https://github.com/hyperthunk/rebar/tree/econf).
+Because of some odd behaviour as part of the build for
+[delegate](https://github.com/hyperthunk/delegate), you will also need to set
+the number of parallel build jobs to *1* in order to ensure a clean run.
 
     $ ./rebar -C init.config get-deps
-    $ ./rebar -C test.config get-deps compile eunit -v
+    $ ./rebar -C test.config get-deps compile unittest -v jobs=1

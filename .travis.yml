@@ -2,4 +2,4 @@ language: erlang
 otp_release:
    - R14B04
 before_script: "./rebar -C init.config get-deps"
-script: "./rebar -C test.config get-deps compile eunit -v"
+script: "./rebar -C test.config get-deps compile unittest -v jobs=1"

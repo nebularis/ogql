@@ -25,16 +25,39 @@
 -type ast_node() :: list(term()) | tuple(atom(), ast_node()).
 
 -spec transform(atom(), ast_node(), any()) -> ast_node().
-transform(Grouping, [_,[[_,Query]],_], _) 
-        when Grouping == fixed_order_group orelse
-             Grouping == traversal_order_group ->
-    {Grouping, Query};
+transform(group, [_,[[_,Query]],_], _) ->
+    Query;
+transform(group, [_,[[_,[Query]]],_], _) ->
+    Query;
 transform('query', Node, _) ->
     case Node of
       [] -> [];
       [""] -> [];
-      _ -> drop_sep(Node)
+      [[AST],[]] ->
+            AST;
+      [[Set], {subquery, _}=SubQuery] ->
+            {Set, SubQuery};
+        _ ->
+            Node
     end;
+transform(intersection, [A, _, B], _) ->
+    Lv = case A of [L] -> L; _ -> A end,
+    Rv = case B of [R] -> R; _ -> B end,
+    {intersect, {Lv, Rv}};
+transform(union, [A,_,B], _) ->
+    {union, {A, B}};
+transform(subquery, [_, Node], _) ->
+    {subquery, Node};
+transform(set, [[]|[Node]], _) ->
+    Node;
+transform(set, [{negated_traversal_operator,_}|[Data]], _) ->
+    {negated_traversal, Data};
+transform(set, [{negated_traversal_operator,_}|Data], _) ->
+    {negated_traversal, Data};
+transform(set, [{recursion_operator,_}|[Data]], _) ->
+    {recursive, Data};
+transform(set, [{recursion_operator,_}|Data], _) ->
+    {recursive, Data};
 transform(expression_list, Node, _) ->
     case Node of
         [] -> [];
@@ -63,8 +86,6 @@ transform(member_name, [<<"$(">>, Data, <<")">>], _) ->
     end;
 transform(data_point, [[], Member], _) ->
     Member;
-transform(recursive_step, [_,Node], _) ->
-    {recursive, Node};
 transform(root_branch_filter, [_,[[_,{root_identifier, Node}]],_], _) ->
     case Node of
         [{primary_asset_id, [AssetId]}, [<<"-">>, Version]] ->
@@ -76,10 +97,14 @@ transform(semver, Node, _) ->
     semver:parse(bin_parts_to_string(Node));
 transform(asset_name, Node, _) ->
     {asset_name, bin_parts_to_string(Node)};
+transform(operator, Op, _) ->
+    {operator, list_to_atom(binary_to_list(Op))};
 transform(data_point, [Axis, _, Member], _) ->
     case Axis of
         [] ->
             {default_axis, Member};
+        {axis, Name} when is_list(Name) ->
+            {{axis, list_to_atom(Name)}, Member};
         _ ->
             {Axis, Member}
     end;
@@ -106,8 +131,10 @@ transform(NonTerminal, Node, _) ->
             Node;
         false ->
             Node2 = case Node of
-                [[_,[H|_]=Word]] when is_list(Word) andalso is_binary(H) -> 
+                [[_,[H|_]=Word]] when is_list(Word) andalso is_binary(H) ->
                     bin_parts_to_string(Word);
+                [[Node,[]]] ->
+                    Node;
                 Bin when is_binary(Bin) ->
                     erlang:binary_to_list(Bin);
                 _ ->
@@ -117,9 +144,9 @@ transform(NonTerminal, Node, _) ->
     end.
 
 is_identifier(NonTerminal) ->
-    lists:member(NonTerminal, 
-        [word, space, crlf, sep, normative_axis, literal_number, 
-            data_point_or_literal, step, grouping, normative_step]).
+    lists:member(NonTerminal,
+        [word, space, crlf, literal_number, normative_axis,
+            data_point_or_literal, set, group, subquery]).
 
 predicate(Type, Node) ->
     case Node of
@@ -130,32 +157,38 @@ predicate(Type, Node) ->
         [[[_, Word]],[]] ->
             {Type, bin_parts_to_string(Word)};
         [[Word], {bracketed_expression, [_, [[_, ExpressionList]], _]}] ->
-            {{Type, bin_parts_to_string(Word)}, 
+            {{Type, bin_parts_to_string(Word)},
                 {filter_expression, reduce(ExpressionList)}};
         [[[_, Word]],  {bracketed_expression, [_, [[_, ExpressionList]], _]}] ->
-                {{Type, bin_parts_to_string(Word)}, 
+                {{Type, bin_parts_to_string(Word)},
                  {filter_expression, reduce(ExpressionList)}};
+        [[<<"?">>],[]] ->   
+            %% NB: this clause occurs when we parse "?" by 
+            %% itself from ogql:predicate/1
+            {Type, "?"};
+        [AST] ->
+            {Type, AST};
         _ ->
             {Type, Node}
     end.
 
 reduce(ExprList) ->
-    lists:flatten(lists:foldl(fun combine_expressions/2, [], ExprList)).
+    lists:foldl(fun combine_expressions/2, [], ExprList).
 
-combine_expressions({expression, Expr}, Acc) ->
-    Acc ++ strip(Expr);
+combine_expressions({expression, Expr}, []) ->
+    strip(Expr);
 combine_expressions({{junction, {Type, _}}, {expression, Expr}}, Acc) ->
-    [{Type, [Acc, strip(Expr)]}].
+    {Type, {Acc, strip(Expr)}}.
 
 strip(Expr) ->
-    [ X || X <- Expr, X /= <<" ">> andalso X /= [] ].
+    list_to_tuple([ X || X <- Expr, X /= <<" ">> andalso X /= [] ]).
 
 bin_parts_to_string(Parts) when is_binary(Parts) ->
     erlang:binary_to_list(Parts);
 bin_parts_to_string(Parts) ->
     lists:concat([ erlang:binary_to_list(B) || B <- lists:flatten(Parts) ]).
 
-drop_sep(Node) ->
-    H = proplists:get_value(head, Node),
-    T = [R || [_,R] <- proplists:get_value(tail, Node)],
-    [H|T].
+%drop_sep(Node) ->
+%    H = proplists:get_value(head, Node),
+%    T = [R || [_,R] <- proplists:get_value(tail, Node)],
+%    [H|T].
